@@ -12,6 +12,7 @@ export(RymManagementAPI)
 export(RymReportingAPI)
 export(RymLogsAPI)
 export(RymGAAPI)
+export(RymUploadAPI)
 
 # Legacy functions (backward compatibility)
 export(rym_get_counters)
