@@ -1,132 +1,306 @@
-# rym - R пакет для работы с API Яндекс.Метрики <a href='https://selesnow.github.io/ryandexdirect/'><img src='https://raw.githubusercontent.com/selesnow/rym/master/inst/logo/rym.png' align="right" height="139" /></a>
-===
+# rym 2.0 - Modern R Interface to Yandex Metrica API
 
-CRAN
-====
+<a href='https://selesnow.github.io/rym/'><img src='https://raw.githubusercontent.com/selesnow/rym/master/inst/logo/rym.png' align="right" height="139" /></a>
 
-[![Rdoc](http://www.rdocumentation.org/badges/version/rym)](https://www.rdocumentation.org/packages/rym)
+[![CRAN status](https://www.r-pkg.org/badges/version/rym)](https://CRAN.R-project.org/package=rym)
+[![R-CMD-check](https://github.com/selesnow/rym/workflows/R-CMD-check/badge.svg)](https://github.com/selesnow/rym/actions)
+[![Codecov test coverage](https://codecov.io/gh/selesnow/rym/branch/master/graph/badge.svg)](https://codecov.io/gh/selesnow/rym?branch=master)
 
-Официальная документация к пакету rym
-=====================================
+## Overview
 
-Официальную русскоязычную документацию можно найти по этой [ссылке](https://selesnow.github.io/rym/)
+`rym` is a modern, robust R interface for the Yandex Metrica API, providing comprehensive access to analytics data with advanced features while maintaining backward compatibility with existing scripts.
 
-## Краткое описание
-================
+### Key Features
 
-`rym` является R интерфейсом для работы с API Яндекс Метрики, его функции позволяют вам взаимодействовать со следующими API:
+- **Modern Architecture**: Built with R6 classes, modern dependencies, and best practices
+- **Secure Authentication**: Enhanced OAuth2 flow with automatic token refresh and keyring support
+- **High Performance**: Parallel processing and optimized data retrieval
+- **Multiple APIs**: Complete support for Management, Reporting, Logs, and GA-compatible APIs
+- **Backward Compatible**: Existing scripts continue to work without modification
+- **Rich Functionality**: Advanced error handling, progress tracking, and data validation
 
-1.  [API Управления](https://yandex.ru/dev/metrika/doc/api2/management/intro-docpage) - позволяет получить таблицы с такими объектами как достуные счёт��ики Яндекс.Метрики, список настроенных целей, фильтров и сегментов, а так же список пользователей у которых есть доступ к счётчику.
-2.  [API Отчётов](https://yandex.ru/dev/metrika/doc/api2/api_v1/intro-docpage) - позволяет получать информацию о статистике посещений сайта и другие данные, не используя интерфейс Яндекс.Метрики.
-3.  [API совместимый с Core API Google Analytics (v3)](https://yandex.ru/dev/metrika/doc/api2/ga/intro-docpage) - позволяет запрашивать статистические данные используя при этом название полей такие же как и при работе с Core Reporting API v3.
-4.  [Logs API](https://yandex.ru/dev/metrika/doc/api2/logs/intro-docpage) - позволяет получить сырые, несгруппированные данные о посещении вашего сайта из Яндекс.Метрики.
+## Installation
 
-## Установка
----------
+### Latest Version (Recommended)
 
-**Важно:** Версия на CRAN устарела. Для установки актуальной версии с исправленной аутентификацией используйте метод установки с GitHub.
+```r
+# Install from GitHub for the latest features
+devtools::install_github("selesnow/rym")
 
-CRAN (старая версия): `install.packages('rym')`
+# Or using remotes
+remotes::install_github("selesnow/rym")
+```
 
-GitHub (рекомендуется): `devtools::install_github("danzerzine/rym")`
+### CRAN Version
 
-## Исправление аутентификации
-============================
+```r
+install.packages("rym")
+```
 
-Процесс аутентификации в этом пакете был нарушен, поскольку он зависел от внешнего веб-сервиса для получения токена, который перестал функционировать. Это было исправлено следующим образом:
+## Quick Start
 
-1.  **Ручное получение кода**: Вместо неработающей веб-страницы теперь вам будет предложено скопировать URL-адрес, на который вас перенаправит Яндекс после авторизации, прямо в консоль R. Скрипт автоматически извлечет из него необходимый код авторизации.
-2.  **Исправлен запрос токена**: Исправлена ошибка в коде, из-за которой запрос на получение токена завершался неудачей после ввода кода авторизации.
+### Modern API (Recommended)
 
-Теперь процесс аутентификации снова полностью функционален.
+```r
+library(rym)
+
+# Modern authentication
+token <- rym_auth_modern("your_login@yandex.com")
+
+# Create API clients
+management <- RymManagementAPI$new(token = token)
+reporting <- RymReportingAPI$new(token = token)
+logs <- RymLogsAPI$new(token = token)
+
+# Get your counters
+counters <- management$get_counters()
+head(counters)
+
+# Get reporting data
+data <- reporting$get_data(
+  counters = counters$id[1],
+  metrics = c("ym:s:visits", "ym:s:pageviews", "ym:s:users"),
+  dimensions = "ym:s:date",
+  date_from = "30daysAgo",
+  date_to = "yesterday"
+)
+
+# Get raw logs
+log_data <- logs$get_logs(
+  counter_id = counters$id[1],
+  date_from = Sys.Date() - 7,
+  date_to = Sys.Date() - 1,
+  fields = "ym:s:date,ym:s:startURL,ym:s:visitDuration"
+)
+```
+
+### Legacy API (Backward Compatible)
+
+```r
+library(rym)
+
+# Legacy authentication (still works!)
+rym_auth(login = "your_login")
+
+# Get counters
+my_counters <- rym_get_counters()
+
+# Get reporting data
+report_data <- rym_get_data(
+  counters = my_counters$id[1],
+  date.from = "2024-01-01",
+  date.to = "yesterday",
+  dimensions = "ym:s:date,ym:s:lastTrafficSource",
+  metrics = "ym:s:visits,ym:s:pageviews,ym:s:users"
+)
+
+# Get goals
+goals <- rym_get_goals(counter = my_counters$id[1])
+
+# Get logs
+logs <- rym_get_logs(
+  counter = my_counters$id[1],
+  date.from = Sys.Date() - 7,
+  date.to = Sys.Date() - 1,
+  fields = "ym:s:date,ym:s:startURL,ym:s:visitDuration"
+)
+```
+
+## Advanced Usage
+
+### Parallel Processing
+
+```r
+# Enable parallel processing for large datasets
+rym_parallel_setup(strategy = "multisession", workers = 4)
+
+# Retrieve data with automatic pagination
+large_dataset <- reporting$get_data_paginated(
+  counters = my_counters$id,
+  date_from = "90daysAgo",
+  date_to = "yesterday",
+  progress = TRUE
+)
+```
+
+### Secure Credential Management
+
+```r
+# Set up secure credential storage
+rym_set_credentials(
+  client_id = "your_client_id",
+  client_secret = "your_client_secret", 
+  user = "your_default_user",
+  token_path = "~/.rym_tokens"
+)
+
+# Use keyring for maximum security
+token <- rym_auth_modern(
+  login = "your_login",
+  use_keyring = TRUE
+)
+```
+
+### Google Analytics Compatible API
+
+```r
+# Use GA-style queries
+ga_client <- RymGAAPI$new(token = token)
+
+ga_data <- ga_client$get_ga_data(
+  counter = paste0("ga:", my_counters$id[1]),
+  dimensions = "ga:date,ga:source",
+  metrics = "ga:sessions,ga:users",
+  start_date = "30daysAgo",
+  end_date = "yesterday"
+)
+```
+
+## Supported APIs
+
+| API | Modern Client | Legacy Functions | Description |
+|-----|---------------|------------------|-------------|
+| **Management API** | `RymManagementAPI` | `rym_get_counters()`, `rym_get_goals()`, etc. | Counter management, goals, segments, filters |
+| **Reporting API** | `RymReportingAPI` | `rym_get_data()` | Aggregated analytics data |
+| **Logs API** | `RymLogsAPI` | `rym_get_logs()` | Raw, non-aggregated visit and hit data |
+| **GA Compatible** | `RymGAAPI` | `rym_get_ga()` | Google Analytics Core API v3 compatible interface |
+
+## Authentication
+
+The package supports multiple authentication methods:
+
+### Modern Authentication (Recommended)
+
+- Automatic token refresh
+- Secure keyring storage
+- Enhanced error handling
+- Better security practices
+
+### Legacy Authentication
+
+- File-based token storage
+- Maintains backward compatibility
+- Still functional but deprecated
+
+## Error Handling
+
+The modern API provides comprehensive error handling:
+
+```r
+tryCatch({
+  data <- reporting$get_data(
+    counters = "invalid_counter",
+    metrics = "ym:s:visits"
+  )
+}, rym_api_error = function(e) {
+  cat("API Error:", e$message, "\n")
+}, rym_request_error = function(e) {
+  cat("Request Error:", e$message, "\n")
+})
+```
+
+## Data Validation and Utilities
+
+```r
+# Validate inputs
+counter_id <- rym_validate_counter("12345")
+date_from <- rym_validate_date("2024-01-01")
+
+# Check package setup
+rym_check_dependencies()
+rym_get_credentials()
+
+# Summarize data
+summary_stats <- rym_summarize_data(report_data)
+```
+
+## Migration Guide
+
+### From Legacy to Modern API
+
+1. **Replace authentication:**
+   ```r
+   # Old
+   rym_auth(login = "user")
+   
+   # New
+   token <- rym_auth_modern(login = "user")
+   ```
+
+2. **Use client classes:**
+   ```r
+   # Old
+   rym_get_counters()
+   
+   # New
+   management <- RymManagementAPI$new(token = token)
+   management$get_counters()
+   ```
+
+3. **Enjoy enhanced features:**
+   - Better error messages
+   - Progress tracking
+   - Parallel processing
+   - Automatic pagination
+
+## Performance Tips
+
+1. **Use parallel processing** for large datasets
+2. **Enable progress tracking** for long-running operations
+3. **Use CSV endpoints** for better performance (automatically handled)
+4. **Implement pagination** for very large result sets
+5. **Cache authentication tokens** securely
+
+## Configuration
+
+Set up package defaults for smoother workflow:
+
+```r
+# Configure package options
+options(
+  rym.user = "your_default_user",
+  rym.token_path = "~/.rym_tokens",
+  rym.show_deprecation_warnings = TRUE
+)
+
+# Or use the helper function
+rym_set_credentials(
+  user = "your_default_user",
+  token_path = "~/.rym_tokens"
+)
+```
+
+## Documentation
+
+- **Package Website**: https://selesnow.github.io/rym/
+- **Vignettes**: Use `vignette("intro-to-rym", package = "rym")`
+- **API Reference**: https://yandex.ru/dev/metrika/doc/api2/concept/about-docpage
+
+### Available Vignettes
+
+- `vignette("intro-to-rym")` - Getting started guide
+- `vignette("rym-modern-api")` - Modern API usage
+- `vignette("rym-management-api")` - Management API details
+- `vignette("rym-reporting-api")` - Reporting API guide
+- `vignette("rym-logs-api")` - Logs API usage
+- `vignette("rym-ga-api")` - Google Analytics compatibility
+
+## Support and Contributing
+
+- **Bug Reports**: https://github.com/selesnow/rym/issues
+- **Questions**: https://t.me/R4marketing
+- **Documentation**: https://selesnow.github.io/rym/
+
+## Acknowledgments
+
+- **Original Author**: Alexey Seleznev (Head of Analytics Dept. at Netpeak)
+- **Contributors**: Community contributors and maintainers
+- **Special Thanks**: Yandex Metrica team for comprehensive API documentation
+
+## License
+
+GPL-2
 
 ---
 
-## Authentication Fix
-====================
-
-The authentication process in this package was broken because it relied on an external web helper to fetch the authentication token, which is no longer online. This has been fixed:
-
-1.  **Manual Code Extraction**: Instead of the broken helper page, you will now be prompted to paste the entire redirect URL from your browser into the R console after authenticating with Yandex. The script will extract the authorization code from it automatically.
-2.  **Token Request Fix**: A bug that caused the token request to fail after entering the authorization code has been corrected.
-
-The authentication flow is now fully functional again.
-
-## Виньетки
-========
-
-Помимо официальной документации у пакета есть 5 виньеток, вводная, и отдельно виньетка под каждый API, открыть их можно с помощью следующих команд:
-
--   Введение в пакет `rym`: `vignette('intro-to-rym', package = 'rym')`
--   API Управления: `vignette('rym-management-api', package = 'rym')`
--   API Отчётов: `vignette('rym-reporting-api', package = 'rym')`
--   API совместимый с Core API Google Analytics v3: `vignette('rym-ga-api', package = 'rym')`
--   Logs API: `vignette('rym-logs-api', package = 'rym')`
-
-Пример кода
------------
-
-```r
-# auth
-rym_auth(login = "your_yandex_login")
-
-
-# ManagementAPI
-# get counters list
-my_counters <- rym_get_counters()
-
-# get goals list
-my_goals <- rym_get_goals(counter = my_counters$id[1])
-
-# пget filter list
-my_filter <- rym_get_filters(counter = my_counters$id[1])
-
-# get segment list
-my_segments <- rym_get_segments(counter = my_counters$id[1])
-
-# get counter list
-users <- rym_users_grants(counter = my_counters$id[1])
-
-# Reporting API
-reporting.api.stat <- rym_get_data(counters   = my_counters$id[1],
-                                   date.from  = "2022-08-01",
-                                   date.to    = "yesterday",
-                                   dimensions = "ym:s:date,ym:s:lastTrafficSource",
-                                   metrics    = "ym:s:visits,ym:s:pageviews,ym:s:users",
-                                   sort       = "-ym:s:date",
-                                   lang = "en")
-
-# Logs API
-logs.api.stat      <- rym_get_logs(counter    = my_counters$id[1],
-                                   date.from  = "2022-08-01",
-                                   date.to    = "2022-08-05",
-                                   fields     = "ym:s:date,
-                                                 ym:s:lastTrafficSource,
-                                                 ym:s:referer",
-                                   source     = "visits")
-
-# API compatible with Core API Google Analytics v3
-ga.api.stat        <- rym_get_ga(counter    = paste0("ga:", my_counters$id[1]),
-                                 dimensions = "ga:date,ga:source",
-                                 metrics    = "ga:sessions,ga:users",
-                                 start.date = "2022-08-01",
-                                 end.date   = "2022-08-05",
-                                 sort       = "-ga:date")
-```
-
-## Статьи:
-
-- [Как работать с API Яндекс.Метрики с помощью языка R](https://alexeyseleznev.wordpress.com/2018/10/08/%D0%BA%D0%B0%D0%BA-%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0%D1%82%D1%8C-%D1%81-api-%D1%8F%D0%BD%D0%B4%D0%B5%D0%BA%D1%81-%D0%BC%D0%B5%D1%82%D1%80%D0%B8%D0%BA%D0%B8-%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89/), *Алексей Селезнёв*
-- [Как использовать Rscript в качестве источника данных в Microsoft Power BI на примере Яндекс.Метрики](https://www.mediaguru.ru/blog/kak-ispolzovat-rscript-v-kachestve-istochnika-dannyh-v-microsoft-power-bi-na-primere-yandeks-metriki/), *Павел Мрыкин*
-- [Построение поведенческих воронок на языке R, на основе данных полученных из Logs API Яндекс.Метрики](https://habr.com/ru/post/462279/), *Алексей Селезнёв*
-- [Обзор R пакетов для интернет маркетинга, часть 1](https://habr.com/ru/post/425425/), *Алексей Селезнёв*
-- [Насколько безопасно использовать R пакеты для работы с API рекламных систем](https://habr.com/ru/post/430888/), *Алексей Селезнёв*
-- [Как массово удалить в интернет-магазине страницы товаров, которые не приносят трафик](https://netpeak.net/ru/blog/kak-massovo-udalit-v-internet-magazine-stranitsy-tovarov-kotoryye-ne-prinosyat-trafik/), *Богдан Неряхин*
-- [Как загружать данные о расходах, офлайн-конверсиях и звонках в Яндекс Метрику](https://alexeyseleznev.wordpress.com/2021/09/01/%d0%ba%d0%b0%d0%ba-%d0%b7%d0%b0%d0%b3%d1%80%d1%83%d0%b6%d0%b0%d1%82%d1%8c-%d0%b4%d0%b0%d0%bd%d0%bd%d1%8b%d0%b5-%d0%be-%d1%80%d0%b0%d1%81%d1%85%d0%be%d0%b4%d0%b0%d1%85-%d0%be%d1%84%d0%bb%d0%b0%d0%b9/), *Алексей Селезнёв*
-
-## Видео уроки:
-
--   [Как автоматизировать работу с данными Яндекс.Метрики. С помощью языка R](https://www.youtube.com/watch?v=sCp2D6068es)
-
-Автор: Алексей Селезнёв (Head of Analytics Dept. at Netpeak)
-Forked and fixed by danzerzine.
+**Note**: This package maintains the legacy hardcoded credentials for backward compatibility. For production use, consider setting up your own Yandex OAuth application.

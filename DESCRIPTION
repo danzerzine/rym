@@ -1,30 +1,59 @@
 Package: rym
 Type: Package
-Title: R Interface to Yandex Metrica API
-Version: 1.0.6
-Authors@R: 
-    c(person(given  = "Alexey",
+Title: Modern R Interface to Yandex Metrica API
+Version: 2.0.0
+Authors@R:
+    c(person(given = "Alexey",
              family = "Seleznev",
-             role   = c("aut", "cre"),
-             email  = "selesnow@gmail.com",
+             role = c("aut"),
+             email = "selesnow@gmail.com",
              comment = c(ORCID = "0000-0003-0410-7385")),
+      person(given = "Daniyar",
+             family = "Contributor",
+             role = c("aut", "cre"),
+             email = "daniyar@example.com"),
       person(given = "Netpeak",
              role = c("cph")))
-Maintainer: Alexey Seleznev <selesnow@gmail.com>
-Description: Allows work with 'Management API' for load counters, segments, filters,
-	user permissions and goals list from Yandex Metrica, 'Reporting API' allows you to get 
-	information about the statistics of site visits and other data without
-	using the web interface, 'Logs API' allows to receive non-aggregated data and 
-	'Compatible with Google Analytics Core Reporting API v3' allows 
-	receive information about site traffic and other data using field names 
-	from Google Analytics Core API.	For more information see official 
-	documents <https://yandex.ru/dev/metrika/doc/api2/concept/about-docpage>.
-Depends: R (>= 3.5.0)
+Author: Alexey Seleznev [aut], Danzerzine [aut, cre], Netpeak [cph]
+Maintainer: Danzerzine <dan@snop.agency>
+Description: Modern, robust R interface to Yandex Metrica API with comprehensive
+    support for Management API, Reporting API, Logs API, and Google Analytics
+    compatible API. Features include advanced authentication, parallel processing,
+    comprehensive error handling, and modern R programming practices while
+    maintaining backward compatibility with existing scripts.
+Depends: R (>= 4.0.0)
 BugReports: https://github.com/selesnow/rym/issues
-Suggests: knitr, rmarkdown
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    mockery,
+    covr
 VignetteBuilder: knitr
 License: GPL-2
-Imports: httr, stringr, utils, purrr
+Imports:
+    httr2,
+    dplyr,
+    tidyr,
+    purrr,
+    stringr,
+    jsonlite,
+    lubridate,
+    readr,
+    cli,
+    rlang,
+    utils,
+    methods,
+    R6,
+    future,
+    future.apply,
+    progressr,
+    keyring,
+    base64enc
 URL: https://selesnow.github.io/rym/
 Encoding: UTF-8
-Language: ru
+Language: en
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Config/testthat/edition: 3

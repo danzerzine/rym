@@ -1,86 +1,97 @@
-.onAttach <- function(lib, pkg, ...) {
+#' Package Initialization Functions
+#'
+#' @description
+#' Functions that run when the package is loaded or attached.
+
+.onAttach <- function(libname, pkgname) {
   packageStartupMessage(rymWelcomeMessage())
-
-  packageStartupMessage("rym presets:")
-
+  
+  packageStartupMessage("rym 2.0 configuration:")
+  
+  ## Check dependencies
+  packageStartupMessage("...Checking dependencies: ", appendLF = FALSE)
+  if (rym_check_dependencies(verbose = FALSE)) {
+    packageStartupMessage("OK")
+  } else {
+    packageStartupMessage("Some dependencies missing")
+  }
+  
   ## token path
-  packageStartupMessage("...Set rym token_path: ", appendLF = F)
+  packageStartupMessage("...Token path: ", appendLF = FALSE)
   if (Sys.getenv("RYM_TOKEN_PATH") != "") {
-    packageStartupMessage("success")
+    packageStartupMessage("set via environment")
+  } else if (!is.null(getOption("rym.token_path"))) {
+    packageStartupMessage("set via options")
   } else {
-    packageStartupMessage("none")
+    packageStartupMessage("using default")
   }
-
+  
   ## username
-  packageStartupMessage("...Set rym username: ", appendLF = F)
+  packageStartupMessage("...Default user: ", appendLF = FALSE)
   if (Sys.getenv("RYM_USER") != "") {
-    packageStartupMessage("success")
+    packageStartupMessage("set via environment")
+  } else if (!is.null(getOption("rym.user"))) {
+    packageStartupMessage("set via options")
   } else {
     packageStartupMessage("none")
   }
 }
-
-#
-#
-
-rymWelcomeMessage <- function() {
-  # library(utils)
-
-  paste0(
-    "\n",
-    "---------------------\n",
-    "Welcome to rym version ", utils::packageDescription("rym")$Version, " - R Interface to Yandex.Metrica API.\n",
-    "\n",
-    " Author:          Alexey Seleznev (Head of analytics dept at Netpeak).\n",
-    "Telegram channel: https://t.me/R4marketing \n",
-    "YouTube channel:  https://www.youtube.com/R4marketing/?sub_confirmation=1 \n",
-    " Email:           selesnow@gmail.com\n",
-    " Blog:            https://alexeyseleznev.wordpress.com \n",
-    " Facebook:        https://facebook.com/selesnown \n",
-    " Linkedin:        https://www.linkedin.com/in/selesnow \n",
-    " Package Site:    https://selesnow.github.io \n",
-    " Rdocumentation:  https://www.rdocumentation.org/collaborators/name/Alexey%20Seleznev \n",
-    "\n",
-    "Support:\n",
-    " Package website: https://selesnow.github.io/rym",
-    " Type help(package = 'rym') for the main documentation.\n",
-    " The github page is: https://github.com/selesnow/rym/\n",
-    "\n",
-    "Vignettes:\n",
-    " vignette('intro-to-rym', package = 'rym')\n",
-    " vignette('rym-management-api', package = 'rym')\n",
-    " vignette('rym-reporting-api', package = 'rym')\n",
-    " vignette('rym-ga-api', package = 'rym')\n",
-    " vignette('rym-logs-api', package = 'rym')\n",
-    " vignette('rym-load-expense', package = 'rym')\n",
-    " vignette('rym-load-offline-conversion', package = 'rym')\n",
-    " vignette('rym-calls', package = 'rym')\n",
-    "\n",
-    "Suggestions and bug-reports can be submitted at: https://github.com/selesnow/rym/issues\n",
-    "Or contact: <selesnow@gmail.com>\n",
-    "\n",
-    "\tTo suppress this message use:  ", "suppressPackageStartupMessages(library(rym))\n",
-    "---------------------\n"
-  )
-}
-
 
 .onLoad <- function(libname, pkgname) {
   op <- options()
-
+  
   op.rym <- list(
     rym.user = Sys.getenv("RYM_USER"),
-    rym.token_path = Sys.getenv("RYM_TOKEN_PATH")
+    rym.token_path = Sys.getenv("RYM_TOKEN_PATH"),
+    rym.client_id = Sys.getenv("RYM_CLIENT_ID"),
+    rym.client_secret = Sys.getenv("RYM_CLIENT_SECRET"),
+    rym.show_deprecation_warnings = TRUE,
+    rym.progress = TRUE
   )
-
-  op.rym <- lapply(op.rym, function(x) if (x == "") {
-    return(NULL)
-  } else {
-    return(x)
-  })
-
+  
+  # Convert empty strings to NULL
+  op.rym <- lapply(op.rym, function(x) if (x == "") return(NULL) else return(x))
+  
+  # Only set options that aren't already set
   toset <- !(names(op.rym) %in% names(op))
   if (any(toset)) options(op.rym[toset])
-
+  
   invisible()
+}
+
+#' Package Welcome Message
+#'
+#' @return Character string with welcome message
+#' @keywords internal
+rymWelcomeMessage <- function() {
+  paste0(
+    "\n",
+    "---------------------\n",
+    "Welcome to rym version ", utils::packageDescription("rym")$Version, " - Modern R Interface to Yandex.Metrica API.\n",
+    "\n",
+    "NEW in v2.0:\n",
+    " * Modern R6-based API clients\n",
+    " * Enhanced authentication with keyring support\n",
+    " * Parallel processing and progress tracking\n",
+    " * Comprehensive error handling\n",
+    " * 100% backward compatibility\n",
+    "\n",
+    "Documentation:\n",
+    " * Package website: https://selesnow.github.io/rym\n",
+    " * Getting started: vignette('intro-to-rym', package = 'rym')\n",
+    " * Modern API: ?RymClient, ?RymManagementAPI, ?RymReportingAPI\n",
+    "\n",
+    "Quick setup:\n",
+    " * Modern auth: rym_auth_modern('your_login')\n",
+    " * Legacy auth: rym_auth('your_login')\n",
+    " * Check config: rym_get_credentials()\n",
+    "\n",
+    "TIP: Use modern API clients for best performance and features!\n",
+    "\n",
+    "Authors: Alexey Seleznev, Community Contributors\n",
+    "Support: https://github.com/selesnow/rym/issues\n",
+    "\n",
+    "To suppress this message: suppressPackageStartupMessages(library(rym))\n",
+    "---------------------\n"
+  )
 }
