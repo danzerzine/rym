@@ -16,7 +16,7 @@ CRAN
 
 `rym` является R интерфейсом для работы с API Яндекс Метрики, его функции позволяют вам взаимодействовать со следующими API:
 
-1.  [API Управления](https://yandex.ru/dev/metrika/doc/api2/management/intro-docpage) - позволяет получить таблицы с такими объектами как достуные счётчики Яндекс.Метрики, список настроенных целей, фильтров и сегментов, а так же список пользователей у которых есть доступ к счётчику.
+1.  [API Управления](https://yandex.ru/dev/metrika/doc/api2/management/intro-docpage) - позволяет получить таблицы с такими объектами как достуные счёт��ики Яндекс.Метрики, список настроенных целей, фильтров и сегментов, а так же список пользователей у которых есть доступ к счётчику.
 2.  [API Отчётов](https://yandex.ru/dev/metrika/doc/api2/api_v1/intro-docpage) - позволяет получать информацию о статистике посещений сайта и другие данные, не используя интерфейс Яндекс.Метрики.
 3.  [API совместимый с Core API Google Analytics (v3)](https://yandex.ru/dev/metrika/doc/api2/ga/intro-docpage) - позволяет запрашивать статистические данные используя при этом название полей такие же как и при работе с Core Reporting API v3.
 4.  [Logs API](https://yandex.ru/dev/metrika/doc/api2/logs/intro-docpage) - позволяет получить сырые, несгруппированные данные о посещении вашего сайта из Яндекс.Метрики.
@@ -24,11 +24,33 @@ CRAN
 ## Установка
 ---------
 
-Установить `rym` можно как с CRAN так и с GitHub
+**Важно:** Версия на CRAN устарела. Для установки актуальной версии с исправленной аутентификацией используйте метод установки с GitHub.
 
-CRAN: `install.packages('rym')`
+CRAN (старая версия): `install.packages('rym')`
 
-GitHub: `devtools::install_github("selesnow/rym")`
+GitHub (рекомендуется): `devtools::install_github("danzerzine/rym")`
+
+## Исправление аутентификации
+============================
+
+Процесс аутентификации в этом пакете был нарушен, поскольку он зависел от внешнего веб-сервиса для получения токена, который перестал функционировать. Это было исправлено следующим образом:
+
+1.  **Ручное получение кода**: Вместо неработающей веб-страницы теперь вам будет предложено скопировать URL-адрес, на который вас перенаправит Яндекс после авторизации, прямо в консоль R. Скрипт автоматически извлечет из него необходимый код авторизации.
+2.  **Исправлен запрос токена**: Исправлена ошибка в коде, из-за которой запрос на получение токена завершался неудачей после ввода кода авторизации.
+
+Теперь процесс аутентификации снова полностью функционален.
+
+---
+
+## Authentication Fix
+====================
+
+The authentication process in this package was broken because it relied on an external web helper to fetch the authentication token, which is no longer online. This has been fixed:
+
+1.  **Manual Code Extraction**: Instead of the broken helper page, you will now be prompted to paste the entire redirect URL from your browser into the R console after authenticating with Yandex. The script will extract the authorization code from it automatically.
+2.  **Token Request Fix**: A bug that caused the token request to fail after entering the authorization code has been corrected.
+
+The authentication flow is now fully functional again.
 
 ## Виньетки
 ========
@@ -46,69 +68,50 @@ GitHub: `devtools::install_github("selesnow/rym")`
 
 ```r
 # auth
-rym_auth(login = "vipman.netpeak", token.path = "metrica_token")
-rym_auth(login = "selesnow", token.path = "metrica_token")
+rym_auth(login = "your_yandex_login")
 
 
 # ManagementAPI
 # get counters list
-selesnow.counters <- rym_get_counters(login      = "selesnow",
-                                      token.path = "metrica_token")
-
-vipman.counters   <- rym_get_counters(login      = "vipman.netpeak",
-                                      token.path = "metrica_token")
+my_counters <- rym_get_counters()
 
 # get goals list
-my_goals <- rym_get_goals(counter = 10595804,
-                          login      = "vipman.netpeak",
-                          token.path = "metrica_token")
+my_goals <- rym_get_goals(counter = my_counters$id[1])
 
 # пget filter list
-my_filter <- rym_get_filters(counter = 10595804,
-                             login      = "vipman.netpeak",
-                             token.path = "metrica_token")
+my_filter <- rym_get_filters(counter = my_counters$id[1])
 
 # get segment list
-my_segments <- rym_get_segments(counter = 10595804,
-                                login      = "vipman.netpeak",
-                                token.path = "metrica_token")
+my_segments <- rym_get_segments(counter = my_counters$id[1])
 
 # get counter list
-users <- rym_users_grants(counter = 10595804,
-                          login      = "vipman.netpeak",
-                          token.path = "metrica_token")
+users <- rym_users_grants(counter = my_counters$id[1])
 
 # Reporting API
-reporting.api.stat <- rym_get_data(counters   = "23660530,10595804",
-                                   date.from  = "2018-08-01",
+reporting.api.stat <- rym_get_data(counters   = my_counters$id[1],
+                                   date.from  = "2022-08-01",
                                    date.to    = "yesterday",
                                    dimensions = "ym:s:date,ym:s:lastTrafficSource",
                                    metrics    = "ym:s:visits,ym:s:pageviews,ym:s:users",
                                    sort       = "-ym:s:date",
-                                   login      = "vipman.netpeak",
-                                   token.path = "metrica_token",
                                    lang = "en")
 
 # Logs API
-logs.api.stat      <- rym_get_logs(counter    = 23660530,
-                                   date.from  = "2018-08-01",
-                                   date.to    = "2018-08-05",
+logs.api.stat      <- rym_get_logs(counter    = my_counters$id[1],
+                                   date.from  = "2022-08-01",
+                                   date.to    = "2022-08-05",
                                    fields     = "ym:s:date,
                                                  ym:s:lastTrafficSource,
                                                  ym:s:referer",
-                                   source     = "visits",
-                                   login      = "vipman.netpeak",
-                                   token.path = "metrica_token")
+                                   source     = "visits")
 
 # API compatible with Core API Google Analytics v3
-ga.api.stat        <- rym_get_ga(counter    = "ga:22584910",
+ga.api.stat        <- rym_get_ga(counter    = paste0("ga:", my_counters$id[1]),
                                  dimensions = "ga:date,ga:source",
                                  metrics    = "ga:sessions,ga:users",
-                                 start.date = "2018-08-01",
-                                 end.date   = "2018-08-05",
-                                 sort       = "-ga:date",
-                                 login      = "selesnow",
-                                 token.path = "metrica_token")
+                                 start.date = "2022-08-01",
+                                 end.date   = "2022-08-05",
+                                 sort       = "-ga:date")
 ```
 
 ## Статьи:
@@ -126,3 +129,4 @@ ga.api.stat        <- rym_get_ga(counter    = "ga:22584910",
 -   [Как автоматизировать работу с данными Яндекс.Метрики. С помощью языка R](https://www.youtube.com/watch?v=sCp2D6068es)
 
 Автор: Алексей Селезнёв (Head of Analytics Dept. at Netpeak)
+Forked and fixed by danzerzine.

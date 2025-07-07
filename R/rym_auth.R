@@ -63,7 +63,10 @@ rym_auth <-
     # if we dont find token file start a auth procedure
     browseURL(paste0("https://oauth.yandex.ru/authorize?response_type=code&client_id=5a87e45d5562421bb29bb9abd17321b3&redirect_uri=https://selesnow.github.io/rym/getToken/get_code.html&force_confirm=", as.integer(new.user), ifelse(is.null(login), "", paste0("&login_hint=", login))))
     # read auth code
-    temp_code <- readline(prompt = "Enter authorize code:")
+    full_url <- readline(prompt = "After authorization, you will be redirected to a blank page. Please copy the full URL from your browser and paste it here: ")
+    
+    # Extract the code from the URL
+    temp_code <- sub("^.*code=([^&]+).*$", "\\1", full_url)
     
     # check code
     # check code - updated to 16 characters
@@ -72,17 +75,15 @@ rym_auth <-
       temp_code <- readline(prompt = "Enter authorize code:")
     }
     
-    token_raw <- request("https://oauth.yandex.ru/token") %>%
-      req_body_form(
-        grant_type = "refresh_token",
-        refresh_token = token$refresh_token,
-        client_id = "5a87e45d5562421bb29bb9abd17321b3",
-        client_secret = "04e7f096ce21483fb1c9861f68c017d7"
-      ) %>%
-      req_perform()
-    
-    # Извлекаем JSON
-    token <- token_raw %>% resp_body_json()
+    token_raw <- httr::POST("https://oauth.yandex.ru/token",
+                            body = list(grant_type = "authorization_code",
+                                        code = temp_code,
+                                        client_id = "5a87e45d5562421bb29bb9abd17321b3",
+                                        client_secret = "04e7f096ce21483fb1c9861f68c017d7"),
+                            encode = "form")
+
+    # parser
+    token <- content(token_raw)
     
     # token class
     class(token) <- "RymToken"
