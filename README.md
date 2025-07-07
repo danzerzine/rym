@@ -2,9 +2,6 @@
 
 <a href='https://selesnow.github.io/rym/'><img src='https://raw.githubusercontent.com/selesnow/rym/master/inst/logo/rym.png' align="right" height="139" /></a>
 
-[![CRAN status](https://www.r-pkg.org/badges/version/rym)](https://CRAN.R-project.org/package=rym)
-[![R-CMD-check](https://github.com/selesnow/rym/workflows/R-CMD-check/badge.svg)](https://github.com/selesnow/rym/actions)
-[![Codecov test coverage](https://codecov.io/gh/selesnow/rym/branch/master/graph/badge.svg)](https://codecov.io/gh/selesnow/rym?branch=master)
 
 ## Overview
 
@@ -25,10 +22,10 @@
 
 ```r
 # Install from GitHub for the latest features
-devtools::install_github("selesnow/rym")
+devtools::install_github("danzerzine/rym")
 
 # Or using remotes
-remotes::install_github("selesnow/rym")
+remotes::install_url("https://github.com/danzerzine/rym/archive/refs/heads/dev.zip", upgrade = "never")
 ```
 
 ### CRAN Version
@@ -287,14 +284,14 @@ rym_set_credentials(
 
 ## Support and Contributing
 
-- **Bug Reports**: https://github.com/selesnow/rym/issues
+- **Bug Reports**: https://github.com/danzerzine/rym/issues
 - **Questions**: https://t.me/R4marketing
 - **Documentation**: https://selesnow.github.io/rym/
 
 ## Acknowledgments
 
 - **Original Author**: Alexey Seleznev (Head of Analytics Dept. at Netpeak)
-- **Contributors**: Community contributors and maintainers
+- **Contributors**: Danzerzine
 - **Special Thanks**: Yandex Metrica team for comprehensive API documentation
 
 ## License
