@@ -4,7 +4,7 @@
 CRAN
 ====
 
-[Rdoc](http://www.rdocumentation.org/badges/version/rym)](https://www.rdocumentation.org/packages/rym)
+[[Rdoc](http://www.rdocumentation.org/badges/version/rym)](https://www.rdocumentation.org/packages/rym)
 
 Официальная документация к пакету rym
 =====================================
@@ -28,7 +28,7 @@ CRAN
 
 CRAN (старая версия): `install.packages('rym')`
 
-GitHub (рекомендуется): `devtools::install_github("danzerzine/rym")`
+GitHub (рекомендуется): `devtools::install_github("danzerzine/rym")` или `remotes::install_url("https://github.com/danzerzine/rym/archive/refs/heads/master.zip", upgrade = "never")`
 
 ## Исправление аутентификации
 ============================
