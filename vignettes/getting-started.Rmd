@@ -1,0 +1,626 @@
+---
+title: "Getting Started with rym 2.0"
+subtitle: "A Complete Guide to Yandex Metrica API in R"
+author: "rym Package Authors"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Getting Started with rym 2.0}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+# Introduction
+
+The `rym` package provides a comprehensive interface to the Yandex Metrica API, allowing you to extract web analytics data, manage counters, upload data, and much more directly from R. Version 2.0 is a complete rewrite that offers modern R practices while maintaining backward compatibility.
+
+## Key Features
+
+- **Complete API Coverage**: Access to all major Yandex Metrica APIs
+- **Modern R6 Classes**: Object-oriented design for extensibility
+- **Backward Compatibility**: All legacy functions still work
+- **Enhanced Authentication**: Secure token management with optional keyring support
+- **Parallel Processing**: Async operations for large data retrievals
+- **Upload Functionality**: Complete support for expense, calls, and offline conversion uploads
+
+# Installation
+
+```{r installation}
+# Install from CRAN (when available)
+install.packages("rym")
+
+# Or install development version from GitHub
+# devtools::install_github("your-repo/rym")
+
+# Load the package
+library(rym)
+```
+
+# Authentication
+
+## Quick Start Authentication
+
+The easiest way to get started is with the legacy authentication function:
+
+```{r auth-quick}
+# Basic authentication
+token <- rym_auth(login = "your_yandex_login")
+```
+
+## Modern Authentication (Recommended)
+
+For enhanced security and features, use the modern authentication system:
+
+```{r auth-modern}
+# Modern authentication with automatic token management
+token <- rym_auth_modern(
+  login = "your_yandex_login",
+  use_keyring = TRUE,  # Store credentials securely
+  interactive = TRUE   # Allow interactive authentication
+)
+```
+
+## Setting Default Credentials
+
+```{r auth-default}
+# Set default credentials for the session
+rym_set_credentials(
+  login = "your_yandex_login",
+  token_path = "~/.rym_tokens"
+)
+
+# Retrieve stored credentials
+creds <- rym_get_credentials()
+```
+
+# Basic Data Retrieval
+
+## Getting Counter Information
+
+```{r counters}
+# Get all available counters
+counters <- rym_get_counters()
+head(counters)
+
+# Search for specific counters
+counters <- rym_get_counters(search.string = "mysite")
+```
+
+## Basic Reporting Data
+
+```{r basic-data}
+# Get basic metrics for the last 7 days
+data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:pageviews,ym:s:users",
+  dimensions = "ym:s:date",
+  date.from = "7daysAgo",
+  date.to = "yesterday"
+)
+
+head(data)
+```
+
+## Advanced Reporting
+
+```{r advanced-data}
+# Get detailed traffic source data
+traffic_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:bounces,ym:s:users",
+  dimensions = "ym:s:trafficSource,ym:s:date",
+  filters = "ym:s:trafficSource=='organic'",
+  date.from = "30daysAgo",
+  date.to = "yesterday"
+)
+```
+
+# Modern R6 API Clients
+
+## Management API
+
+```{r management-api}
+# Create management client
+mgmt <- RymManagementAPI$new(token = token)
+
+# Get counters with modern interface
+counters <- mgmt$get_counters()
+
+# Get goals for a specific counter
+goals <- mgmt$get_goals(counter = 12345678)
+
+# Get segments
+segments <- mgmt$get_segments(counter = 12345678)
+
+# Add a new goal
+new_goal <- mgmt$add_goal(
+  counter = 12345678,
+  name = "Newsletter Signup",
+  type = "action",
+  conditions = list(url = "/newsletter-signup")
+)
+```
+
+## Reporting API
+
+```{r reporting-api}
+# Create reporting client
+reporting <- RymReportingAPI$new(token = token)
+
+# Get data with enhanced options
+data <- reporting$get_data(
+  counters = 12345678,
+  metrics = c("ym:s:visits", "ym:s:pageviews"),
+  dimensions = c("ym:s:date", "ym:s:trafficSource"),
+  date_from = "30daysAgo",
+  date_to = "yesterday",
+  filters = "ym:s:visits>100"
+)
+```
+
+## Logs API
+
+```{r logs-api}
+# Create logs client
+logs <- RymLogsAPI$new(token = token)
+
+# Get raw visit logs
+visit_logs <- logs$get_logs(
+  counter_id = 12345678,
+  date_from = Sys.Date() - 7,
+  date_to = Sys.Date() - 1,
+  fields = "ym:s:date,ym:s:clientID,ym:s:visitDuration,ym:s:pageViews",
+  source = "visits",
+  progress = TRUE
+)
+
+# Get available fields
+available_fields <- logs$get_available_fields("visits")
+```
+
+## Upload API
+
+```{r upload-api}
+# Create upload client
+upload <- RymUploadAPI$new(token = token)
+
+# Upload expense data
+expense_result <- upload$upload_expense(
+  counter_id = 12345678,
+  data = expense_df,
+  comment = "Monthly advertising expenses"
+)
+
+# Upload calls data
+calls_result <- upload$upload_calls(
+  counter_id = 12345678,
+  data = calls_df,
+  client_id_type = "CLIENT_ID",
+  comment = "Call tracking data"
+)
+
+# Get upload status
+uploads <- upload$get_expense_uploads(counter_id = 12345678)
+```
+
+# Working with Google Analytics Style Queries
+
+```{r ga-api}
+# Create GA-compatible client
+ga <- RymGAAPI$new(token = token)
+
+# Use GA-style query syntax
+ga_data <- ga$get_ga_data(
+  counter = "ga:12345678",
+  dimensions = "ga:date,ga:source",
+  metrics = "ga:sessions,ga:users",
+  start_date = "2023-01-01",
+  end_date = "2023-01-31",
+  filters = "ga:medium==organic"
+)
+
+# Get GA metadata
+metadata <- ga$get_ga_metadata()
+```
+
+# Data Upload and Management
+
+## Expense Data Upload
+
+```{r expense-upload}
+# Prepare expense data
+expense_data <- data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc",
+  UTMCampaign = "winter_sale",
+  UTMContent = "ad_variant_1",
+  UTMTerm = "winter_boots",
+  Expenses = 1500.50,
+  stringsAsFactors = FALSE
+)
+
+# Upload using legacy function
+result <- rym_upload_expense(
+  counter = 12345678,
+  data = expense_data,
+  comment = "January advertising costs"
+)
+
+# Get upload status
+uploads <- rym_get_uploadings_expense(counter = 12345678)
+```
+
+## Calls Data Upload
+
+```{r calls-upload}
+# Prepare calls data
+calls_data <- data.frame(
+  ClientID = c("123.456.789", "987.654.321"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00"),
+  PhoneNumber = c("+1234567890", "+0987654321"),
+  TalkDuration = c(120, 85),
+  Price = c(25.00, 30.00),
+  Currency = c("USD", "USD"),
+  stringsAsFactors = FALSE
+)
+
+# Upload calls data
+result <- rym_upload_calls(
+  counter = 12345678,
+  data = calls_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Weekly call tracking data"
+)
+
+# Enable calls tracking
+rym_enable_calls(counter = 12345678)
+```
+
+## Offline Conversions
+
+```{r offline-conversions}
+# Prepare offline conversion data
+conversion_data <- data.frame(
+  ClientID = c("123.456.789", "987.654.321"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00"),
+  Price = c(99.99, 149.99),
+  Currency = c("USD", "USD"),
+  OrderID = c("ORD001", "ORD002"),
+  stringsAsFactors = FALSE
+)
+
+# Upload offline conversions
+result <- rym_upload_offline_conversion(
+  counter = 12345678,
+  data = conversion_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Weekly offline sales"
+)
+
+# Enable offline conversions
+rym_enable_offline_conversion(counter = 12345678)
+```
+
+# Error Handling and Best Practices
+
+## Handling API Errors
+
+```{r error-handling}
+library(tryCatch)
+
+# Robust data retrieval with error handling
+safe_get_data <- function(counter, ...) {
+  tryCatch({
+    rym_get_data(counters = counter, ...)
+  }, error = function(e) {
+    message("Error retrieving data: ", e$message)
+    return(NULL)
+  })
+}
+
+# Use the safe function
+data <- safe_get_data(
+  counter = "12345678",
+  metrics = "ym:s:visits",
+  date.from = "yesterday",
+  date.to = "yesterday"
+)
+```
+
+## Rate Limiting
+
+```{r rate-limiting}
+# The modern clients handle rate limiting automatically
+# For manual control, add delays between requests
+get_multiple_counters <- function(counter_list) {
+  results <- list()
+  
+  for (counter in counter_list) {
+    results[[counter]] <- rym_get_data(counters = counter)
+    Sys.sleep(1)  # Respectful delay
+  }
+  
+  return(results)
+}
+```
+
+## Parallel Processing
+
+```{r parallel}
+library(future)
+library(future.apply)
+
+# Enable parallel processing
+plan(multisession, workers = 4)
+
+# Process multiple counters in parallel
+counter_list <- c("12345678", "87654321", "11111111")
+
+parallel_data <- future_lapply(counter_list, function(counter) {
+  rym_get_data(
+    counters = counter,
+    metrics = "ym:s:visits,ym:s:users",
+    date.from = "7daysAgo",
+    date.to = "yesterday"
+  )
+})
+
+# Reset to sequential processing
+plan(sequential)
+```
+
+# Data Validation and Utilities
+
+## Date Validation
+
+```{r validation}
+# Validate date formats
+valid_date <- rym_validate_date("2023-01-15")  # Returns TRUE
+invalid_date <- rym_validate_date("15/01/2023")  # Returns FALSE
+
+# Validate counter IDs
+valid_counter <- rym_validate_counter("12345678")  # Returns TRUE
+```
+
+## Progress Tracking
+
+```{r progress}
+# Set up progress tracking for large operations
+rym_progress_setup(enable = TRUE)
+
+# Large data retrieval with progress
+large_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:pageviews,ym:s:users",
+  dimensions = "ym:s:date,ym:s:trafficSource,ym:s:browser",
+  date.from = "90daysAgo",
+  date.to = "yesterday"
+)
+```
+
+# Migration from Legacy Functions
+
+## Legacy vs Modern Comparison
+
+```{r migration-comparison}
+# Legacy approach
+legacy_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits"
+)
+
+# Modern approach
+reporting <- RymReportingAPI$new(token = token)
+modern_data <- reporting$get_data(
+  counters = 12345678,
+  metrics = "ym:s:visits"
+)
+
+# Both return the same data structure
+identical(legacy_data, modern_data)  # Should be TRUE
+```
+
+## Gradual Migration Strategy
+
+1. **Phase 1**: Continue using legacy functions (no changes needed)
+2. **Phase 2**: Start using modern R6 classes for new projects
+3. **Phase 3**: Migrate existing code to take advantage of enhanced features
+
+```{r migration-phases}
+# Phase 1: Legacy (works as before)
+data1 <- rym_get_counters()
+
+# Phase 2: Modern classes for enhanced features
+mgmt <- RymManagementAPI$new(token = token)
+data2 <- mgmt$get_counters()
+
+# Phase 3: Advanced features
+mgmt$enable_parallel_processing()
+data3 <- mgmt$get_counters_async()
+```
+
+# Troubleshooting
+
+## Common Issues
+
+### Authentication Problems
+
+```{r auth-troubleshooting}
+# Check if token is valid
+if (is.null(token) || is.null(token$access_token)) {
+  message("Token is invalid, re-authenticating...")
+  token <- rym_auth_modern(interactive = TRUE)
+}
+
+# Check token expiration
+if (token$expire_at < Sys.time()) {
+  message("Token expired, refreshing...")
+  token <- rym_auth_modern(login = token$username)
+}
+```
+
+### Data Retrieval Issues
+
+```{r data-troubleshooting}
+# Check if counter exists and is accessible
+counters <- rym_get_counters()
+if (!"12345678" %in% counters$id) {
+  stop("Counter 12345678 not found or not accessible")
+}
+
+# Validate date ranges
+if (as.Date("2023-01-01") > Sys.Date()) {
+  stop("Start date cannot be in the future")
+}
+```
+
+### API Limits
+
+```{r api-limits}
+# Handle API limits gracefully
+get_data_with_retry <- function(counter, max_retries = 3) {
+  for (i in 1:max_retries) {
+    result <- tryCatch({
+      rym_get_data(counters = counter)
+    }, error = function(e) {
+      if (grepl("rate limit", e$message, ignore.case = TRUE)) {
+        message("Rate limit hit, waiting 60 seconds...")
+        Sys.sleep(60)
+        return("retry")
+      } else {
+        stop(e)
+      }
+    })
+    
+    if (!identical(result, "retry")) {
+      return(result)
+    }
+  }
+  
+  stop("Max retries exceeded")
+}
+```
+
+# Advanced Examples
+
+## Building a Dashboard
+
+```{r dashboard-example}
+library(ggplot2)
+library(dplyr)
+
+# Create a simple analytics dashboard
+create_dashboard <- function(counter_id, days = 30) {
+  # Get main metrics
+  main_data <- rym_get_data(
+    counters = counter_id,
+    metrics = "ym:s:visits,ym:s:pageviews,ym:s:users,ym:s:bounceRate",
+    dimensions = "ym:s:date",
+    date.from = paste0(days, "daysAgo"),
+    date.to = "yesterday"
+  )
+  
+  # Get traffic sources
+  traffic_data <- rym_get_data(
+    counters = counter_id,
+    metrics = "ym:s:visits",
+    dimensions = "ym:s:trafficSource",
+    date.from = paste0(days, "daysAgo"),
+    date.to = "yesterday"
+  )
+  
+  # Create visualizations
+  visits_plot <- ggplot(main_data, aes(x = as.Date(date), y = visits)) +
+    geom_line() +
+    labs(title = "Daily Visits", x = "Date", y = "Visits")
+  
+  traffic_plot <- ggplot(traffic_data, aes(x = trafficSource, y = visits)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Traffic Sources", x = "Source", y = "Visits")
+  
+  return(list(
+    data = main_data,
+    traffic = traffic_data,
+    plots = list(visits = visits_plot, traffic = traffic_plot)
+  ))
+}
+
+# Generate dashboard
+dashboard <- create_dashboard("12345678", days = 30)
+```
+
+## Automated Reporting
+
+```{r automated-reporting}
+# Create automated daily report
+daily_report <- function(counter_list, email_recipients) {
+  report_data <- list()
+  
+  for (counter in counter_list) {
+    data <- rym_get_data(
+      counters = counter,
+      metrics = "ym:s:visits,ym:s:users,ym:s:bounceRate",
+      date.from = "yesterday",
+      date.to = "yesterday"
+    )
+    
+    report_data[[counter]] <- data
+  }
+  
+  # Generate report
+  report <- paste(
+    "Daily Analytics Report for", Sys.Date() - 1,
+    "\n\nSummary:",
+    sapply(names(report_data), function(counter) {
+      data <- report_data[[counter]]
+      paste0(
+        "\nCounter ", counter, ":",
+        "\n  Visits: ", data$visits,
+        "\n  Users: ", data$users,
+        "\n  Bounce Rate: ", round(data$bounceRate, 2), "%"
+      )
+    }),
+    collapse = "\n"
+  )
+  
+  # Send email (implementation depends on your email setup)
+  # send_email(to = email_recipients, subject = "Daily Analytics", body = report)
+  
+  return(report)
+}
+```
+
+# Resources and Further Reading
+
+## Official Documentation
+
+- [Yandex Metrica API Documentation](https://yandex.com/dev/metrika/)
+- [rym Package GitHub Repository](https://github.com/your-repo/rym)
+
+## Community Resources
+
+- [R for Data Science](https://r4ds.had.co.nz/)
+- [Web Analytics in R](https://www.example.com/web-analytics-r)
+
+## Getting Help
+
+- Use `?function_name` for function documentation
+- Check the package vignettes: `vignette(package = "rym")`
+- Report issues on GitHub
+- Join the R community forums
+
+---
+
+This vignette provides a comprehensive introduction to the rym package. For more specific use cases, check out the specialized vignettes for upload functionality, advanced analytics, and API reference.

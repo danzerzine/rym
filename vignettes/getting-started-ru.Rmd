@@ -1,0 +1,626 @@
+---
+title: "Начало работы с rym 2.0"
+subtitle: "Полное руководство по Yandex Metrica API в R"
+author: "Авторы пакета rym"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: 
+  %\VignetteIndexEntry{Начало работы с rym 2.0}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#≥",
+  eval = FALSE
+)
+```
+
+# Введение
+
+Пакет `rym` предоставляет полный интерфейс к API Yandex Metrica, позволяя вам извлекать данные веб-аналитики, управлять счетчиками, загружать данные и многое другое напрямую из R. Версия 2.0 — это полная переработка, предлагающая современные практики R при сохранении обратной совместимости.
+
+## Основные особенности
+
+- **Полное покрытие API**: Доступ ко всем основным API Yandex Metrica
+- **Современные классы R6**: Объектно-ориентированный дизайн для расширяемости
+- **Обратная совместимость**: Все устаревшие функции продолжают работать
+- **Улучшенная аутентификация**: Безопасное управление токенами с поддержкой ключевого хранения
+- **Параллельная обработка**: Асинхронные операции для извлечения больших объемов данных
+- **Функциональность загрузки**: Полная поддержка загрузки расходов, звонков и оффлайн-конверсий
+
+# Установка
+
+```{r установкa}
+# Установка с CRAN (когда будет доступно)
+install.packages("rym")
+
+# Или установить разработческую версию с GitHub
+# devtools::install_github("your-repo/rym")
+
+# Загрузить пакет
+library(rym)
+```
+
+# Аутентификация
+
+## Быстрая аутентификация
+
+Самый простой способ начать — использовать устаревшую функцию аутентификации:
+
+```{r auth-quick}
+# Базовая аутентификация
+token <- rym_auth(login = "ваш_логин_yandex")
+```
+
+## Современная аутентификация (рекомендуется)
+
+Для улучшенной безопасности и функционала используйте современную систему аутентификации:
+
+```{r auth-modern}
+# Современная аутентификация с автоматическим управлением токенами
+token <- rym_auth_modern(
+  login = "ваш_логин_yandex",
+  use_keyring = TRUE,  # Безопасное хранение учетных данных
+  interactive = TRUE   # Разрешить интерактивную аутентификацию
+)
+```
+
+## Установка учетных данных по умолчанию
+
+```{r auth-default}
+# Установить учетные данные по умолчанию для сессии
+rym_set_credentials(
+  login = "ваш_логин_yandex",
+  token_path = "~/.rym_tokens"
+)
+
+# Получить сохраненные учетные данные
+creds <- rym_get_credentials()
+```
+
+# Основное извлечение данных
+
+## Получение информации о счетчиках
+
+```{r counters}
+# Получить все доступные счетчики
+counters <- rym_get_counters()
+head(counters)
+
+# Поиск конкретных счетчиков
+counters <- rym_get_counters(search.string = "мойсайт")
+```
+
+## Основные отчетные данные
+
+```{r basic-data}
+# Получить основные показатели за последние 7 дней
+data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:pageviews,ym:s:users",
+  dimensions = "ym:s:date",
+  date.from = "7daysAgo",
+  date.to = "yesterday"
+)
+
+head(data)
+```
+
+## Расширенная отчетность
+
+```{r advanced-data}
+# Получить подробные данные о источниках трафика
+traffic_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:bounces,ym:s:users",
+  dimensions = "ym:s:trafficSource,ym:s:date",
+  filters = "ym:s:trafficSource=='organic'",
+  date.from = "30daysAgo",
+  date.to = "yesterday"
+)
+```
+
+# Современные API клиенты R6
+
+## Управление API
+
+```{r management-api}
+# Создать клиент управления
+mgmt <- RymManagementAPI$new(token = token)
+
+# Получить счетчики с современным интерфейсом
+counters <- mgmt$get_counters()
+
+# Получить цели для конкретного счетчика
+goals <- mgmt$get_goals(counter = 12345678)
+
+# Получить сегменты
+segments <- mgmt$get_segments(counter = 12345678)
+
+# Добавить новую цель
+new_goal <- mgmt$add_goal(
+  counter = 12345678,
+  name = "Регистрация на новостную рассылку",
+  type = "action",
+  conditions = list(url = "/newsletter-signup")
+)
+```
+
+## Отчетность API
+
+```{r reporting-api}
+# Создать клиент для отчетности
+reporting <- RymReportingAPI$new(token = token)
+
+# Получить данные с расширенными опциями
+data <- reporting$get_data(
+  counters = 12345678,
+  metrics = c("ym:s:visits", "ym:s:pageviews"),
+  dimensions = c("ym:s:date", "ym:s:trafficSource"),
+  date_from = "30daysAgo",
+  date_to = "yesterday",
+  filters = "ym:s:visits>100"
+)
+```
+
+## Журналы API
+
+```{r logs-api}
+# Создать клиент журналов
+logs <- RymLogsAPI$new(token = token)
+
+# Получить необработанные журналы посещений
+visit_logs <- logs$get_logs(
+  counter_id = 12345678,
+  date_from = Sys.Date() - 7,
+  date_to = Sys.Date() - 1,
+  fields = "ym:s:date,ym:s:clientID,ym:s:visitDuration,ym:s:pageViews",
+  source = "visits",
+  progress = TRUE
+)
+
+# Получить доступные поля
+available_fields <- logs$get_available_fields("visits")
+```
+
+## API загрузки
+
+```{r upload-api}
+# Создать клиент загрузки
+upload <- RymUploadAPI$new(token = token)
+
+# Загрузить расходы
+expense_result <- upload$upload_expense(
+  counter_id = 12345678,
+  data = expense_df,
+  comment = "Ежемесячные расходы на рекламу"
+)
+
+# Загрузить данные о звонках
+calls_result <- upload$upload_calls(
+  counter_id = 12345678,
+  data = calls_df,
+  client_id_type = "CLIENT_ID",
+  comment = "Данные о звонках"
+)
+
+# Получить статус загрузки
+uploads <- upload$get_expense_uploads(counter_id = 12345678)
+```
+
+# Работа с запросами в стиле Google Analytics
+
+```{r ga-api}
+# Создать клиент, совместимый с GA
+ga <- RymGAAPI$new(token = token)
+
+# Используйте синтаксис запросов в стиле GA
+ga_data <- ga$get_ga_data(
+  counter = "ga:12345678",
+  dimensions = "ga:date,ga:source",
+  metrics = "ga:sessions,ga:users",
+  start_date = "2023-01-01",
+  end_date = "2023-01-31",
+  filters = "ga:medium==organic"
+)
+
+# Получить метаданные GA
+metadata <- ga$get_ga_metadata()
+```
+
+# Загрузка данных и управление
+
+## Загрузка данных о расходах
+
+```{r expense-upload}
+# Подготовить данные о расходах
+expense_data <- data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc",
+  UTMCampaign = "winter_sale",
+  UTMContent = "ad_variant_1",
+  UTMTerm = "winter_boots",
+  Expenses = 1500.50,
+  stringsAsFactors = FALSE
+)
+
+# Загрузка с использованием устаревшей функции
+result <- rym_upload_expense(
+  counter = 12345678,
+  data = expense_data,
+  comment = "Январские рекламные расходы"
+)
+
+# Получить статус загрузки
+uploads <- rym_get_uploadings_expense(counter = 12345678)
+```
+
+## Загрузка данных о звонках
+
+```{r calls-upload}
+# Подготовить данные о звонках
+calls_data <- data.frame(
+  ClientID = c("123.456.789", "987.654.321"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00"),
+  PhoneNumber = c("+1234567890", "+0987654321"),
+  TalkDuration = c(120, 85),
+  Price = c(25.00, 30.00),
+  Currency = c("USD", "USD"),
+  stringsAsFactors = FALSE
+)
+
+# Загрузить данные о звонках
+result <- rym_upload_calls(
+  counter = 12345678,
+  data = calls_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Еженедельные данные о звонках"
+)
+
+# Включить отслеживание звонков
+rym_enable_calls(counter = 12345678)
+```
+
+## Оффлайн конверсии
+
+```{r offline-conversions}
+# Подготовить данные о оффлайн конверсиях
+conversion_data <- data.frame(
+  ClientID = c("123.456.789", "987.654.321"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00"),
+  Price = c(99.99, 149.99),
+  Currency = c("USD", "USD"),
+  OrderID = c("ORD001", "ORD002"),
+  stringsAsFactors = FALSE
+)
+
+# Загрузить оффлайн конверсии
+result <- rym_upload_offline_conversion(
+  counter = 12345678,
+  data = conversion_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Еженедельные оффлайн продажи"
+)
+
+# Включить оффлайн конверсии
+rym_enable_offline_conversion(counter = 12345678)
+```
+
+# Обработка ошибок и лучшие практики
+
+## Обработка ошибок API
+
+```{r error-handling}
+library(tryCatch)
+
+# Надежное извлечение данных с обработкой ошибок
+safe_get_data <- function(counter, ...) {
+  tryCatch({
+    rym_get_data(counters = counter, ...)
+  }, error = function(e) {
+    message("Ошибка при извлечении данных: ", e$message)
+    return(NULL)
+  })
+}
+
+# Используйте безопасную функцию
+data <- safe_get_data(
+  counter = "12345678",
+  metrics = "ym:s:visits",
+  date.from = "yesterday",
+  date.to = "yesterday"
+)
+```
+
+## Ограничения скорости
+
+```{r rate-limiting}
+# Современные клиенты автоматически обрабатывают ограничения скорости
+# Для ручного управления добавьте задержки между запросами
+get_multiple_counters <- function(counter_list) {
+  results <- list()
+  
+  for (counter in counter_list) {
+    results[[counter]] <- rym_get_data(counters = counter)
+    Sys.sleep(1)  # Уважительное ожидание
+  }
+  
+  return(results)
+}
+```
+
+## Параллельная обработка
+
+```{r parallel}
+library(future)
+library(future.apply)
+
+# Включить параллельную обработку
+plan(multisession, workers = 4)
+
+# Обработка нескольких счетчиков параллельно
+counter_list <- c("12345678", "87654321", "11111111")
+
+parallel_data <- future_lapply(counter_list, function(counter) {
+  rym_get_data(
+    counters = counter,
+    metrics = "ym:s:visits,ym:s:users",
+    date.from = "7daysAgo",
+    date.to = "yesterday"
+  )
+})
+
+# Сброс на последовательную обработку
+plan(sequential)
+```
+
+# Проверка данных и утилиты
+
+## Проверка даты
+
+```{r validation}
+# Проверка форматов даты
+valid_date <- rym_validate_date("2023-01-15")  # Возвращает TRUE
+invalid_date <- rym_validate_date("15/01/2023")  # Возвращает FALSE
+
+# Проверка ID счетчика
+valid_counter <- rym_validate_counter("12345678")  # Возвращает TRUE
+```
+
+## Отслеживание прогресса
+
+```{r progress}
+# Настройка отслеживания прогресса для крупных операций
+rym_progress_setup(enable = TRUE)
+
+# Извлечение больших объемов данных с отслеживанием прогресса
+large_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits,ym:s:pageviews,ym:s:users",
+  dimensions = "ym:s:date,ym:s:trafficSource,ym:s:browser",
+  date.from = "90daysAgo",
+  date.to = "yesterday"
+)
+```
+
+# Перемещение от устаревших функций
+
+## Сравнение наследие и современное
+
+```{r migration-comparison}
+# Подход наследия
+legacy_data <- rym_get_data(
+  counters = "12345678",
+  metrics = "ym:s:visits"
+)
+
+# Современный подход
+reporting <- RymReportingAPI$new(token = token)
+modern_data <- reporting$get_data(
+  counters = 12345678,
+  metrics = "ym:s:visits"
+)
+
+# Оба возвращают одну и ту же структуру данных
+identical(legacy_data, modern_data)  # Должно быть TRUE
+```
+
+## Стратегия постепенной миграции
+
+1. **Стадия 1**: Продолжать использование устаревших функций (изменения не требуются)
+2. **Стадия 2**: Начать использование современных классов R6 для новых проектов
+3. **Стадия 3**: Миграция существующего кода с целью использования расширенных функций
+
+```{r migration-phases}
+# Стадия 1: Наследие (работает как раньше)
+data1 <- rym_get_counters()
+
+# Стадия 2: Современные классы для расширенных функций
+mgmt <- RymManagementAPI$new(token = token)
+data2 <- mgmt$get_counters()
+
+# Стадия 3: Расширенные функции
+mgmt$enable_parallel_processing()
+data3 <- mgmt$get_counters_async()
+```
+
+# Устранение неполадок
+
+## Общие проблемы
+
+### Проблемы аутентификации
+
+```{r auth-troubleshooting}
+# Проверить токен
+if (is.null(token) || is.null(token$access_token)) {
+  message("Токен недействителен, повторная аутентификация...")
+  token <- rym_auth_modern(interactive = TRUE)
+}
+
+# Проверить срок действия токена
+if (token$expire_at < Sys.time()) {
+  message("Срок действия токена истек, обновление...")
+  token <- rym_auth_modern(login = token$username)
+}
+```
+
+### Проблемы с извлечением данных
+
+```{r data-troubleshooting}
+# Проверить, существует ли счетчик и доступен ли
+counters <- rym_get_counters()
+if (!"12345678" %in% counters$id) {
+  stop("Счетчик 12345678 не найден или недоступен")
+}
+
+# Проверить диапазоны дат
+if (as.Date("2023-01-01") > Sys.Date()) {
+  stop("Дата начала не может быть в будущем")
+}
+```
+
+### Ограничения API
+
+```{r api-limits}
+# Грамотная обработка ограничений API
+get_data_with_retry <- function(counter, max_retries = 3) {
+  for (i in 1:max_retries) {
+    result <- tryCatch({
+      rym_get_data(counters = counter)
+    }, error = function(e) {
+      if (grepl("rate limit", e$message, ignore.case = TRUE)) {
+        message("Достигнут лимит скорости, ждем 60 секунд...")
+        Sys.sleep(60)
+        return("retry")
+      } else {
+        stop(e)
+      }
+    })
+    
+    if (!identical(result, "retry")) {
+      return(result)
+    }
+  }
+  
+  stop("Превышено максимальное количество попыток")
+}
+```
+
+# Продвинутые примеры
+
+## Создание панели управления
+
+```{r dashboard-example}
+library(ggplot2)
+library(dplyr)
+
+# Создать простую панель аналитики
+create_dashboard <- function(counter_id, days = 30) {
+  # Получить основные показатели
+  main_data <- rym_get_data(
+    counters = counter_id,
+    metrics = "ym:s:visits,ym:s:pageviews,ym:s:users,ym:s:bounceRate",
+    dimensions = "ym:s:date",
+    date.from = paste0(days, "daysAgo"),
+    date.to = "yesterday"
+  )
+  
+  # Получить источники трафика
+  traffic_data <- rym_get_data(
+    counters = counter_id,
+    metrics = "ym:s:visits",
+    dimensions = "ym:s:trafficSource",
+    date.from = paste0(days, "daysAgo"),
+    date.to = "yesterday"
+  )
+  
+  # Создать визуализации
+  visits_plot <- ggplot(main_data, aes(x = as.Date(date), y = visits)) +
+    geom_line() +
+    labs(title = "Ежедневные визиты", x = "Дата", y = "Визиты")
+  
+  traffic_plot <- ggplot(traffic_data, aes(x = trafficSource, y = visits)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Источники трафика", x = "Источник", y = "Визиты")
+  
+  return(list(
+    data = main_data,
+    traffic = traffic_data,
+    plots = list(visits = visits_plot, traffic = traffic_plot)
+  ))
+}
+
+# Сгенерировать панель
+dashboard <- create_dashboard("12345678", days = 30)
+```
+
+## Автоматизированная отчетность
+
+```{r automated-reporting}
+# Создать автоматический ежедневный отчет
+daily_report <- function(counter_list, email_recipients) {
+  report_data <- list()
+  
+  for (counter in counter_list) {
+    data <- rym_get_data(
+      counters = counter,
+      metrics = "ym:s:visits,ym:s:users,ym:s:bounceRate",
+      date.from = "yesterday",
+      date.to = "yesterday"
+    )
+    
+    report_data[[counter]] <- data
+  }
+  
+  # Сгенерировать отчет
+  report <- paste(
+    "Ежедневный отчет по аналитике за", Sys.Date() - 1,
+    "\n\nСводка:",
+    sapply(names(report_data), function(counter) {
+      data <- report_data[[counter]]
+      paste0(
+        "\nСчетчик ", counter, ":",
+        "\n  Визиты: ", data$visits,
+        "\n  Пользователи: ", data$users,
+        "\n  Процент отказов: ", round(data$bounceRate, 2), "%"
+      )
+    }),
+    collapse = "\n"
+  )
+  
+  # Отправить email (в зависимости от настроек вашей почты)
+  # send_email(to = email_recipients, subject = "Ежедневная аналитика", body = report)
+  
+  return(report)
+}
+```
+
+# Ресурсы и дополнительное чтение
+
+## Официальная документация
+
+- [Документация Yandex Metrica API](https://yandex.com/dev/metrika/)
+- [Репозиторий пакета rym на GitHub](https://github.com/your-repo/rym)
+
+## Ресурсы сообщества
+
+- [R для науки о данных](https://r4ds.had.co.nz/)
+- [Веб-аналитика на R](https://www.example.com/web-analytics-r)
+
+## Получение помощи
+
+- Используйте `?function_name` для документации по функциям
+- Ознакомьтесь с виньетками пакета: `vignette(package = "rym")`
+- Сообщайте об ошибках на GitHub
+- Присоединяйтесь к R-сообществу на форумах
+
+---
+
+Эта виньетка предоставляет полное введение в пакет rym. Для более специфичных случаев использования ознакомьтесь с специализированными виньетками по загрузке данных, расширенной аналитике и справочнику API.

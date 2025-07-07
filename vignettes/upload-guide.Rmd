@@ -1,0 +1,687 @@
+---
+title: "Data Upload Guide for rym 2.0"
+subtitle: "Complete Guide to Upload Functionality"
+author: "rym Package Authors"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Data Upload Guide for rym 2.0}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+# Introduction to Data Upload
+
+The rym package provides comprehensive upload functionality for Yandex Metrica, allowing you to import various types of data to enhance your analytics. This vignette covers all upload features available in rym 2.0.
+
+## Types of Data Upload
+
+- **Expense Data**: Advertising costs and marketing expenses
+- **Calls Data**: Phone call tracking information
+- **Offline Conversions**: Sales and conversion data from offline channels
+
+## Modern vs Legacy Upload
+
+rym 2.0 provides both modern R6-based upload classes and legacy functions for backward compatibility.
+
+# Authentication for Upload Operations
+
+```{r auth}
+library(rym)
+
+# Modern authentication (recommended)
+token <- rym_auth_modern(
+  login = "your_yandex_login",
+  use_keyring = TRUE
+)
+
+# Create modern upload client
+upload_client <- RymUploadAPI$new(token = token)
+```
+
+# Expense Data Upload
+
+## Data Format Requirements
+
+Expense data must include specific columns to match Yandex Metrica's requirements:
+
+```{r expense-format}
+# Required columns for expense data
+expense_data <- data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc", 
+  UTMCampaign = "winter_campaign",
+  UTMContent = "ad_text_1",
+  UTMTerm = "winter_boots",
+  Expenses = 1250.75,
+  stringsAsFactors = FALSE
+)
+
+# Optional columns
+expense_data_extended <- data.frame(
+  Date = as.Date(c("2023-01-15", "2023-01-16")),
+  UTMSource = c("google", "facebook"),
+  UTMMedium = c("cpc", "paid"),
+  UTMCampaign = c("winter_campaign", "winter_campaign"),
+  UTMContent = c("ad_text_1", "ad_image_1"),
+  UTMTerm = c("winter_boots", "winter_shoes"),
+  Expenses = c(1250.75, 890.50),
+  Currency = c("USD", "USD"),
+  AdCostType = c("CPC", "CPM"),
+  stringsAsFactors = FALSE
+)
+```
+
+## Upload Expense Data
+
+### Using Modern API
+
+```{r expense-modern}
+# Upload using modern client
+result <- upload_client$upload_expense(
+  counter_id = 12345678,
+  data = expense_data,
+  comment = "January 2023 advertising expenses",
+  provider = "rym"
+)
+
+# Check upload status
+print(result$uploading$status)
+print(result$uploading$id)
+```
+
+### Using Legacy Functions
+
+```{r expense-legacy}
+# Upload using legacy function
+result <- rym_upload_expense(
+  counter = 12345678,
+  data = expense_data,
+  comment = "January 2023 advertising expenses"
+)
+
+# Get all expense uploads
+uploads <- rym_get_uploadings_expense(counter = 12345678)
+head(uploads)
+```
+
+## Delete Expense Data
+
+```{r expense-delete}
+# Prepare data for deletion (same format as upload)
+delete_data <- data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc",
+  UTMCampaign = "winter_campaign",
+  UTMContent = "ad_text_1", 
+  UTMTerm = "winter_boots",
+  Expenses = 1250.75,
+  stringsAsFactors = FALSE
+)
+
+# Delete using modern API
+result <- upload_client$delete_expense(
+  counter_id = 12345678,
+  data = delete_data,
+  comment = "Removing incorrect expense data"
+)
+
+# Delete using legacy function
+result <- rym_delete_uploaded_expense(
+  counter = 12345678,
+  data = delete_data,
+  comment = "Removing incorrect expense data"
+)
+```
+
+# Calls Data Upload
+
+## Data Format for Calls
+
+```{r calls-format}
+# Basic calls data format
+calls_data <- data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00"),
+  PhoneNumber = c("+1234567890", "+0987654321"),
+  TalkDuration = c(120, 85),  # in seconds
+  Price = c(25.00, 30.00),
+  Currency = c("USD", "USD"),
+  stringsAsFactors = FALSE
+)
+
+# Extended calls data with additional fields
+calls_extended <- data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10", "555.666.777.10"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00", "2023-01-15 16:20:00"),
+  PhoneNumber = c("+1234567890", "+0987654321", "+5556667777"),
+  TalkDuration = c(120, 85, 200),
+  Price = c(25.00, 30.00, 45.00),
+  Currency = c("USD", "USD", "USD"),
+  CallTrackerURL = c("", "https://example.com/call1", ""),
+  Tag = c("qualified", "not_qualified", "qualified"),
+  stringsAsFactors = FALSE
+)
+```
+
+## Upload Calls Data
+
+### Modern API Approach
+
+```{r calls-modern}
+# Upload calls using modern client
+result <- upload_client$upload_calls(
+  counter_id = 12345678,
+  data = calls_data,
+  client_id_type = "CLIENT_ID",
+  comment = "Weekly call tracking data",
+  new_goal_name = "Phone Calls Goal"  # Optional: create new goal
+)
+
+# Get calls upload status
+uploads <- upload_client$get_calls_uploads(counter_id = 12345678)
+```
+
+### Legacy Functions
+
+```{r calls-legacy}
+# Upload using legacy function
+result <- rym_upload_calls(
+  counter = 12345678,
+  data = calls_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Weekly call tracking data",
+  new.goal.name = "Phone Calls Goal"
+)
+
+# Get upload status
+uploads <- rym_get_uploadings_calls(counter = 12345678)
+```
+
+## Managing Calls Tracking
+
+```{r calls-management}
+# Enable calls tracking
+enable_result <- rym_enable_calls(counter = 12345678)
+
+# Check if calls are allowed
+allow_result <- rym_allow_calls(counter = 12345678)
+print(paste("Calls allowed since:", allow_result))
+
+# Disable calls tracking when no longer needed
+disable_result <- rym_disable_calls(counter = 12345678)
+
+# Using modern API
+success <- upload_client$manage_calls(counter_id = 12345678, enable = TRUE)
+```
+
+# Offline Conversions Upload
+
+## Data Format for Offline Conversions
+
+```{r offline-format}
+# Basic offline conversion format
+offline_data <- data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00"),
+  Price = c(99.99, 149.99),
+  Currency = c("USD", "USD"),
+  OrderID = c("ORD001", "ORD002"),
+  stringsAsFactors = FALSE
+)
+
+# Extended format with additional fields
+offline_extended <- data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10", "555.666.777.10"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00", "2023-01-16 18:45:00"),
+  Price = c(99.99, 149.99, 299.99),
+  Currency = c("USD", "USD", "USD"),
+  OrderID = c("ORD001", "ORD002", "ORD003"),
+  ProductCategory = c("Electronics", "Clothing", "Electronics"),
+  ProductName = c("Smartphone", "Winter Jacket", "Laptop"),
+  Quantity = c(1, 2, 1),
+  stringsAsFactors = FALSE
+)
+```
+
+## Upload Offline Conversions
+
+### Modern API
+
+```{r offline-modern}
+# Upload using modern client
+result <- upload_client$upload_offline_conversions(
+  counter_id = 12345678,
+  data = offline_data,
+  client_id_type = "CLIENT_ID",
+  comment = "Weekly offline sales data"
+)
+
+# Get upload status
+uploads <- upload_client$get_offline_conversion_uploads(counter_id = 12345678)
+```
+
+### Legacy Functions
+
+```{r offline-legacy}
+# Upload using legacy function
+result <- rym_upload_offline_conversion(
+  counter = 12345678,
+  data = offline_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Weekly offline sales data"
+)
+
+# Get upload status
+uploads <- rym_get_uploadings_offline_conversions(counter = 12345678)
+```
+
+## Managing Offline Conversions
+
+```{r offline-management}
+# Enable offline conversions
+enable_result <- rym_enable_offline_conversion(counter = 12345678)
+
+# Check offline conversion settings
+allow_result <- rym_allow_offline_conversion(counter = 12345678)
+
+# Disable offline conversions
+disable_result <- rym_disable_offline_conversion(counter = 12345678)
+
+# Using modern API
+success <- upload_client$manage_offline_conversions(counter_id = 12345678, enable = TRUE)
+```
+
+# Advanced Upload Scenarios
+
+## Batch Upload Processing
+
+```{r batch-upload}
+# Process multiple files
+process_batch_uploads <- function(file_list, counter_id, upload_type = "expense") {
+  results <- list()
+  
+  for (file_path in file_list) {
+    # Read data
+    data <- read.csv(file_path, stringsAsFactors = FALSE)
+    
+    # Upload based on type
+    if (upload_type == "expense") {
+      result <- upload_client$upload_expense(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Batch upload:", basename(file_path))
+      )
+    } else if (upload_type == "calls") {
+      result <- upload_client$upload_calls(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Batch upload:", basename(file_path))
+      )
+    } else if (upload_type == "offline") {
+      result <- upload_client$upload_offline_conversions(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Batch upload:", basename(file_path))
+      )
+    }
+    
+    results[[basename(file_path)]] <- result
+    
+    # Add delay between uploads
+    Sys.sleep(2)
+  }
+  
+  return(results)
+}
+
+# Example usage
+# file_list <- c("expense_jan.csv", "expense_feb.csv", "expense_mar.csv")
+# results <- process_batch_uploads(file_list, 12345678, "expense")
+```
+
+## Upload with Validation
+
+```{r upload-validation}
+# Validate expense data before upload
+validate_expense_data <- function(data) {
+  required_cols <- c("Date", "UTMSource", "UTMMedium", "Expenses")
+  
+  # Check required columns
+  missing_cols <- setdiff(required_cols, colnames(data))
+  if (length(missing_cols) > 0) {
+    stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  # Check data types
+  if (!inherits(data$Date, "Date")) {
+    stop("Date column must be of Date type")
+  }
+  
+  if (!is.numeric(data$Expenses)) {
+    stop("Expenses column must be numeric")
+  }
+  
+  # Check for negative expenses
+  if (any(data$Expenses < 0)) {
+    warning("Negative expenses detected")
+  }
+  
+  # Check date range
+  if (any(data$Date > Sys.Date())) {
+    stop("Future dates not allowed")
+  }
+  
+  return(TRUE)
+}
+
+# Safe upload with validation
+safe_upload_expense <- function(counter_id, data, comment = "") {
+  tryCatch({
+    # Validate data
+    validate_expense_data(data)
+    
+    # Upload
+    result <- upload_client$upload_expense(
+      counter_id = counter_id,
+      data = data,
+      comment = comment
+    )
+    
+    message("Upload successful. ID: ", result$uploading$id)
+    return(result)
+    
+  }, error = function(e) {
+    message("Upload failed: ", e$message)
+    return(NULL)
+  })
+}
+```
+
+## Monitoring Upload Status
+
+```{r monitoring}
+# Monitor upload progress
+monitor_uploads <- function(counter_id, upload_type = "expense") {
+  
+  if (upload_type == "expense") {
+    uploads <- upload_client$get_expense_uploads(counter_id)
+  } else if (upload_type == "calls") {
+    uploads <- upload_client$get_calls_uploads(counter_id)
+  } else if (upload_type == "offline") {
+    uploads <- upload_client$get_offline_conversion_uploads(counter_id)
+  }
+  
+  if (nrow(uploads) == 0) {
+    message("No uploads found")
+    return(NULL)
+  }
+  
+  # Summary by status
+  status_summary <- table(uploads$status)
+  
+  cat("Upload Status Summary:\n")
+  for (status in names(status_summary)) {
+    cat(sprintf("  %s: %d uploads\n", status, status_summary[status]))
+  }
+  
+  # Recent uploads
+  recent_uploads <- uploads[order(uploads$creation_time, decreasing = TRUE), ][1:min(5, nrow(uploads)), ]
+  
+  cat("\nRecent Uploads:\n")
+  for (i in 1:nrow(recent_uploads)) {
+    upload <- recent_uploads[i, ]
+    cat(sprintf("  ID: %s | Status: %s | Time: %s\n", 
+                upload$id, upload$status, upload$creation_time))
+  }
+  
+  return(uploads)
+}
+
+# Example usage
+# monitor_uploads(12345678, "expense")
+```
+
+# Error Handling and Troubleshooting
+
+## Common Upload Errors
+
+```{r error-handling}
+# Handle common upload errors
+handle_upload_error <- function(error_message) {
+  if (grepl("authentication", error_message, ignore.case = TRUE)) {
+    message("Authentication error. Please check your token.")
+    return("auth_error")
+  } else if (grepl("rate limit", error_message, ignore.case = TRUE)) {
+    message("Rate limit exceeded. Wait before retrying.")
+    return("rate_limit")
+  } else if (grepl("format", error_message, ignore.case = TRUE)) {
+    message("Data format error. Check your data structure.")
+    return("format_error")
+  } else if (grepl("permission", error_message, ignore.case = TRUE)) {
+    message("Permission denied. Check counter access rights.")
+    return("permission_error")
+  } else {
+    message("Unknown error: ", error_message)
+    return("unknown_error")
+  }
+}
+
+# Robust upload function
+robust_upload <- function(upload_func, max_retries = 3, retry_delay = 30) {
+  for (attempt in 1:max_retries) {
+    result <- tryCatch({
+      upload_func()
+    }, error = function(e) {
+      error_type <- handle_upload_error(e$message)
+      
+      if (error_type == "rate_limit" && attempt < max_retries) {
+        message(sprintf("Attempt %d failed. Retrying in %d seconds...", 
+                       attempt, retry_delay))
+        Sys.sleep(retry_delay)
+        return("retry")
+      } else {
+        stop(e)
+      }
+    })
+    
+    if (!identical(result, "retry")) {
+      return(result)
+    }
+  }
+  
+  stop("Max retries exceeded")
+}
+
+# Example usage
+# robust_upload(function() {
+#   upload_client$upload_expense(12345678, expense_data, "Test upload")
+# })
+```
+
+## Data Format Troubleshooting
+
+```{r format-troubleshooting}
+# Debug data format issues
+debug_data_format <- function(data, upload_type = "expense") {
+  cat("Data Format Debug Report\n")
+  cat("========================\n\n")
+  
+  cat("Data dimensions:", nrow(data), "rows,", ncol(data), "columns\n\n")
+  
+  cat("Column names:\n")
+  cat(paste(colnames(data), collapse = ", "), "\n\n")
+  
+  cat("Column types:\n")
+  for (col in colnames(data)) {
+    cat(sprintf("  %s: %s\n", col, class(data[[col]])[1]))
+  }
+  
+  cat("\nFirst few rows:\n")
+  print(head(data, 3))
+  
+  cat("\nData quality checks:\n")
+  
+  # Check for missing values
+  na_cols <- sapply(data, function(x) sum(is.na(x)))
+  if (any(na_cols > 0)) {
+    cat("  Missing values found in columns:\n")
+    for (col in names(na_cols[na_cols > 0])) {
+      cat(sprintf("    %s: %d missing values\n", col, na_cols[col]))
+    }
+  } else {
+    cat("  No missing values found\n")
+  }
+  
+  # Type-specific checks
+  if (upload_type == "expense") {
+    if (!"Date" %in% colnames(data)) {
+      cat("  ERROR: Date column missing\n")
+    } else if (!inherits(data$Date, "Date")) {
+      cat("  ERROR: Date column is not Date type\n")
+    }
+    
+    if (!"Expenses" %in% colnames(data)) {
+      cat("  ERROR: Expenses column missing\n")
+    } else if (!is.numeric(data$Expenses)) {
+      cat("  ERROR: Expenses column is not numeric\n")
+    }
+  }
+}
+
+# Example usage
+# debug_data_format(expense_data, "expense")
+```
+
+# Best Practices
+
+## Data Preparation
+
+```{r best-practices}
+# Best practice data preparation function
+prepare_expense_data <- function(raw_data) {
+  # Ensure proper column names
+  required_cols <- c("Date", "UTMSource", "UTMMedium", "UTMCampaign", "Expenses")
+  
+  # Clean and validate data
+  clean_data <- raw_data %>%
+    # Convert date column
+    mutate(Date = as.Date(Date)) %>%
+    # Clean numeric columns
+    mutate(Expenses = as.numeric(gsub("[^0-9.]", "", Expenses))) %>%
+    # Remove rows with missing required data
+    filter(!is.na(Date), !is.na(Expenses), Expenses > 0) %>%
+    # Clean text columns
+    mutate(
+      UTMSource = trimws(UTMSource),
+      UTMMedium = trimws(UTMMedium),
+      UTMCampaign = trimws(UTMCampaign)
+    ) %>%
+    # Remove duplicates
+    distinct()
+  
+  return(clean_data)
+}
+
+# Incremental upload strategy
+incremental_upload <- function(counter_id, data, batch_size = 1000) {
+  total_rows <- nrow(data)
+  num_batches <- ceiling(total_rows / batch_size)
+  
+  results <- list()
+  
+  for (i in 1:num_batches) {
+    start_row <- (i - 1) * batch_size + 1
+    end_row <- min(i * batch_size, total_rows)
+    
+    batch_data <- data[start_row:end_row, ]
+    
+    cat(sprintf("Uploading batch %d/%d (%d rows)...\n", i, num_batches, nrow(batch_data)))
+    
+    result <- upload_client$upload_expense(
+      counter_id = counter_id,
+      data = batch_data,
+      comment = sprintf("Batch %d of %d", i, num_batches)
+    )
+    
+    results[[i]] <- result
+    
+    # Add delay between batches
+    if (i < num_batches) {
+      Sys.sleep(5)
+    }
+  }
+  
+  return(results)
+}
+```
+
+# Migration from Legacy to Modern API
+
+## Side-by-Side Comparison
+
+```{r migration-comparison}
+# Legacy approach
+legacy_upload <- function() {
+  result <- rym_upload_expense(
+    counter = 12345678,
+    data = expense_data,
+    comment = "Legacy upload"
+  )
+  
+  uploads <- rym_get_uploadings_expense(counter = 12345678)
+  return(list(result = result, uploads = uploads))
+}
+
+# Modern approach
+modern_upload <- function() {
+  upload_client <- RymUploadAPI$new(token = token)
+  
+  result <- upload_client$upload_expense(
+    counter_id = 12345678,
+    data = expense_data,
+    comment = "Modern upload"
+  )
+  
+  uploads <- upload_client$get_expense_uploads(counter_id = 12345678)
+  return(list(result = result, uploads = uploads))
+}
+```
+
+## Migration Benefits
+
+The modern API provides several advantages:
+
+- **Better Error Handling**: More detailed error messages and recovery options
+- **Consistent Interface**: Unified approach across all upload types
+- **Enhanced Features**: Progress tracking, batch operations, validation
+- **Future-Proof**: Will receive new features and improvements
+
+# Resources and References
+
+## Official Documentation
+
+- [Yandex Metrica Upload API Documentation](https://yandex.com/dev/metrika/doc/api2/management/uploading/uploading.html)
+- [Data Format Requirements](https://yandex.com/dev/metrika/doc/api2/management/uploading/data-format.html)
+
+## Related Vignettes
+
+- `vignette("getting-started", package = "rym")` - General package introduction
+- `vignette("advanced-analytics", package = "rym")` - Advanced analytics techniques
+
+---
+
+This comprehensive guide covers all aspects of data upload functionality in rym 2.0. For additional help, consult the function documentation using `?function_name` or visit the package GitHub repository.

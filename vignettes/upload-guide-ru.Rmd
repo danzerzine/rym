@@ -1,0 +1,687 @@
+---
+title: "Руководство по загрузке данных для rym 2.0"
+subtitle: "Полное руководство по функциям загрузки"
+author: "Авторы пакета rym"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: 
+  %\VignetteIndexEntry{Руководство по загрузке данных для rym 2.0}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#≥",
+  eval = FALSE
+)
+```
+
+# Введение в загрузку данных
+
+Пакет rym предоставляет обширные возможности загрузки для Yandex Metrica, позволяя импортировать различные типы данных для улучшения вашего анализа. Эта виньетка охватывает все функции загрузки, доступные в rym 2.0.
+
+## Типы загружаемых данных
+
+- **Данные расходов**: Затраты на рекламу и маркетинг
+- **Данные о звонках**: Информация о телефонных звонках
+- **Оффлайн-конверсии**: Продажи и данные о конверсиях из оффлайн-каналов
+
+## Современная и устаревшая загрузка
+
+rym 2.0 предоставляет как современные загрузочные классы на основе R6, так и устаревшие функции для обратной совместимости.
+
+# Аутентификация для операций загрузки
+
+```{r auth}
+library(rym)
+
+# Современная аутентификация (рекомендуется)
+token  rym_auth_modern(
+  login = "ваш_логин_yandex",
+  use_keyring = TRUE
+)
+
+# Создать современный клиент загрузки
+upload_client  RymUploadAPI$new(token = token)
+```
+
+# Загрузка данных о расходах
+
+## Требования к формату данных
+
+Данные о расходах должны включать определенные столбцы, чтобы соответствовать требованиям Yandex Metrica:
+
+```{r expense-format}
+# Обязательные столбцы для данных о расходах
+expense_data  data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc", 
+  UTMCampaign = "winter_campaign",
+  UTMContent = "ad_text_1",
+  UTMTerm = "winter_boots",
+  Expenses = 1250.75,
+  stringsAsFactors = FALSE
+)
+
+# Необязательные столбцы
+expense_data_extended  data.frame(
+  Date = as.Date(c("2023-01-15", "2023-01-16")),
+  UTMSource = c("google", "facebook"),
+  UTMMedium = c("cpc", "paid"),
+  UTMCampaign = c("winter_campaign", "winter_campaign"),
+  UTMContent = c("ad_text_1", "ad_image_1"),
+  UTMTerm = c("winter_boots", "winter_shoes"),
+  Expenses = c(1250.75, 890.50),
+  Currency = c("USD", "USD"),
+  AdCostType = c("CPC", "CPM"),
+  stringsAsFactors = FALSE
+)
+```
+
+## Загрузка данных о расходах
+
+### Использование современного API
+
+```{r expense-modern}
+# Загрузка с использованием современного клиента
+result  upload_client$upload_expense(
+  counter_id = 12345678,
+  data = expense_data,
+  comment = "Рекламные расходы января 2023",
+  provider = "rym"
+)
+
+# Проверить статус загрузки
+print(result$uploading$status)
+print(result$uploading$id)
+```
+
+### Использование устаревших функций
+
+```{r expense-legacy}
+# Загрузка с использованием устаревшей функции
+result  rym_upload_expense(
+  counter = 12345678,
+  data = expense_data,
+  comment = "Рекламные расходы января 2023"
+)
+
+# Получить все загрузки расходов
+uploads  rym_get_uploadings_expense(counter = 12345678)
+head(uploads)
+```
+
+## Удаление данных о расходах
+
+```{r expense-delete}
+# Подготовить данные для удаления (тот же формат, что и при загрузке)
+delete_data  data.frame(
+  Date = as.Date("2023-01-15"),
+  UTMSource = "google",
+  UTMMedium = "cpc",
+  UTMCampaign = "winter_campaign",
+  UTMContent = "ad_text_1", 
+  UTMTerm = "winter_boots",
+  Expenses = 1250.75,
+  stringsAsFactors = FALSE
+)
+
+# Удаление с использованием современного API
+result  upload_client$delete_expense(
+  counter_id = 12345678,
+  data = delete_data,
+  comment = "Удаление некорректных данных о расходах"
+)
+
+# Удаление с использованием устаревшей функции
+result  rym_delete_uploaded_expense(
+  counter = 12345678,
+  data = delete_data,
+  comment = "Удаление некорректных данных о расходах"
+)
+```
+
+# Загрузка данных о звонках
+
+## Формат данных о звонках
+
+```{r calls-format}
+# Базовый формат данных о звонках
+calls_data  data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00"),
+  PhoneNumber = c("+1234567890", "+0987654321"),
+  TalkDuration = c(120, 85),  # в секундах
+  Price = c(25.00, 30.00),
+  Currency = c("USD", "USD"),
+  stringsAsFactors = FALSE
+)
+
+# Расширенные данные о звонках с дополнительными полями
+calls_extended  data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10", "555.666.777.10"),
+  DateTime = c("2023-01-15 10:30:00", "2023-01-15 14:45:00", "2023-01-15 16:20:00"),
+  PhoneNumber = c("+1234567890", "+0987654321", "+5556667777"),
+  TalkDuration = c(120, 85, 200),
+  Price = c(25.00, 30.00, 45.00),
+  Currency = c("USD", "USD", "USD"),
+  CallTrackerURL = c("", "https://example.com/call1", ""),
+  Tag = c("qualified", "not_qualified", "qualified"),
+  stringsAsFactors = FALSE
+)
+```
+
+## Загрузка данных о звонках
+
+### Современный подход API
+
+```{r calls-modern}
+# Загрузка звонков с использованием современного клиента
+result  upload_client$upload_calls(
+  counter_id = 12345678,
+  data = calls_data,
+  client_id_type = "CLIENT_ID",
+  comment = "Еженедельные данные о звонках",
+  new_goal_name = "Цель по звонкам"  # Необязательно: создать новую цель
+)
+
+# Получить статус загрузки звонков
+uploads  upload_client$get_calls_uploads(counter_id = 12345678)
+```
+
+### Устаревшие функции
+
+```{r calls-legacy}
+# Загрузка с использованием устаревшей функции
+result  rym_upload_calls(
+  counter = 12345678,
+  data = calls_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Еженедельные данные о звонках",
+  new.goal.name = "Цель по звонкам"
+)
+
+# Получить статус загрузки
+uploads  rym_get_uploadings_calls(counter = 12345678)
+```
+
+## Управление отслеживанием звонков
+
+```{r calls-management}
+# Включить отслеживание звонков
+enable_result  rym_enable_calls(counter = 12345678)
+
+# Проверить, разрешены ли звонки
+allow_result  rym_allow_calls(counter = 12345678)
+print(paste("Звонки разрешены с:", allow_result))
+
+# Отключить отслеживание звонков, когда оно больше не нужно
+disable_result  rym_disable_calls(counter = 12345678)
+
+# Использование современного API
+success  upload_client$manage_calls(counter_id = 12345678, enable = TRUE)
+```
+
+# Загрузка оффлайн-конверсий
+
+## Формат данных для оффлайн-конверсий
+
+```{r offline-format}
+# Базовый формат оффлайн-конверсий
+offline_data  data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00"),
+  Price = c(99.99, 149.99),
+  Currency = c("USD", "USD"),
+  OrderID = c("ORD001", "ORD002"),
+  stringsAsFactors = FALSE
+)
+
+# Расширенный формат с дополнительными полями
+offline_extended  data.frame(
+  ClientID = c("123.456.789.10", "987.654.321.10", "555.666.777.10"),
+  DateTime = c("2023-01-16 09:00:00", "2023-01-16 15:30:00", "2023-01-16 18:45:00"),
+  Price = c(99.99, 149.99, 299.99),
+  Currency = c("USD", "USD", "USD"),
+  OrderID = c("ORD001", "ORD002", "ORD003"),
+  ProductCategory = c("Ошибка внесения продукта", "Одежда", "Электроника"),
+  ProductName = c("Смартфон", "Зимняя куртка", "Ноутбук"),
+  Quantity = c(1, 2, 1),
+  stringsAsFactors = FALSE
+)
+```
+
+## Загрузка оффлайн-конверсий
+
+### Современный API
+
+```{r offline-modern}
+# Загрузка с использованием современного клиента
+result  upload_client$upload_offline_conversions(
+  counter_id = 12345678,
+  data = offline_data,
+  client_id_type = "CLIENT_ID",
+  comment = "Еженедельные данные о продажах оффлайн"
+)
+
+# Получить статус загрузки
+uploads  upload_client$get_offline_conversion_uploads(counter_id = 12345678)
+```
+
+### Устаревшие функции
+
+```{r offline-legacy}
+# Загрузка с использованием устаревшей функции
+result  rym_upload_offline_conversion(
+  counter = 12345678,
+  data = offline_data,
+  client.id.type = "CLIENT_ID",
+  comment = "Еженедельные данные о продажах оффлайн"
+)
+
+# Получить статус загрузки
+uploads  rym_get_uploadings_offline_conversions(counter = 12345678)
+```
+
+## Управление оффлайн-конверсиями
+
+```{r offline-management}
+# Включить оффлайн-конверсии
+enable_result  rym_enable_offline_conversion(counter = 12345678)
+
+# Проверить настройки оффлайн-конверсий
+allow_result  rym_allow_offline_conversion(counter = 12345678)
+
+# Отключить оффлайн-конверсии
+disable_result  rym_disable_offline_conversion(counter = 12345678)
+
+# Использование современного API
+success  upload_client$manage_offline_conversions(counter_id = 12345678, enable = TRUE)
+```
+
+# Сценарии расширенной загрузки
+
+## Обработка пакетной загрузки
+
+```{r batch-upload}
+# Обработка нескольких файлов
+process_batch_uploads  function(file_list, counter_id, upload_type = "expense") {
+  results  list()
+  
+  for (file_path in file_list) {
+    # Чтение данных
+    data  read.csv(file_path, stringsAsFactors = FALSE)
+    
+    # Загрузка в зависимости от типа
+    if (upload_type == "expense") {
+      result  upload_client$upload_expense(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Пакетная загрузка:", basename(file_path))
+      )
+    } else if (upload_type == "calls") {
+      result  upload_client$upload_calls(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Пакетная загрузка:", basename(file_path))
+      )
+    } else if (upload_type == "offline") {
+      result  upload_client$upload_offline_conversions(
+        counter_id = counter_id,
+        data = data,
+        comment = paste("Пакетная загрузка:", basename(file_path))
+      )
+    }
+    
+    results[[basename(file_path)]]  result
+    
+    # Добавить задержку между загрузками
+    Sys.sleep(2)
+  }
+  
+  return(results)
+}
+
+# Пример использования
+# file_list  c("expense_jan.csv", "expense_feb.csv", "expense_mar.csv")
+# results  process_batch_uploads(file_list, 12345678, "expense")
+```
+
+## Загрузка с проверкой
+
+```{r upload-validation}
+# Проверка данных о расходах перед загрузкой
+validate_expense_data  function(data) {
+  required_cols  c("Date", "UTMSource", "UTMMedium", "Expenses")
+  
+  # Проверка обязательных столбцов
+  missing_cols  setdiff(required_cols, colnames(data))
+  if (length(missing_cols)   0) {
+    stop("Отсутствуют обязательные столбцы: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  # Проверка типов данных
+  if (!inherits(data$Date, "Date")) {
+    stop("Столбец Date должен быть типа Date")
+  }
+  
+  if (!is.numeric(data$Expenses)) {
+    stop("Столбец Expenses должен быть числовым")
+  }
+  
+  # Проверка на отрицательные затраты
+  if (any(data$Expenses   0)) {
+    warning("Обнаружены отрицательные затраты")
+  }
+  
+  # Проверка диапазона дат
+  if (any(data$Date  Sys.Date())) {
+    stop("Будущие даты недопустимы")
+  }
+  
+  return(TRUE)
+}
+
+# Безопасная загрузка с проверкой
+safe_upload_expense  function(counter_id, data, comment = "") {
+  tryCatch({
+    # Проверка данных
+    validate_expense_data(data)
+    
+    # Загрузка
+    result  upload_client$upload_expense(
+      counter_id = counter_id,
+      data = data,
+      comment = comment
+    )
+    
+    message("Загрузка успешна. ID: ", result$uploading$id)
+    return(result)
+    
+  }, error = function(e) {
+    message("Ошибка загрузки: ", e$message)
+    return(NULL)
+  })
+}
+```
+
+## Мониторинг статуса загрузки
+
+```{r monitoring}
+# Мониторинг прогресса загрузки
+monitor_uploads  function(counter_id, upload_type = "expense") {
+  
+  if (upload_type == "expense") {
+    uploads  upload_client$get_expense_uploads(counter_id)
+  } else if (upload_type == "calls") {
+    uploads  upload_client$get_calls_uploads(counter_id)
+  } else if (upload_type == "offline") {
+    uploads  upload_client$get_offline_conversion_uploads(counter_id)
+  }
+  
+  if (nrow(uploads) == 0) {
+    message("Загрузки не найдены")
+    return(NULL)
+  }
+  
+  # Резюме по статусам
+  status_summary  table(uploads$status)
+  
+  cat("Резюме статусов загрузки:\n")
+  for (status in names(status_summary)) {
+    cat(sprintf("  %s: %d загрузок\n", status, status_summary[status]))
+  }
+  
+  # Недавние загрузки
+  recent_uploads  uploads[order(uploads$creation_time, decreasing = TRUE), ][1:min(5, nrow(uploads)), ]
+  
+  cat("\nНедавние загрузки:\n")
+  for (i in 1:nrow(recent_uploads)) {
+    upload  recent_uploads[i, ]
+    cat(sprintf("  ID: %s | Статус: %s | Время: %s\n", 
+                upload$id, upload$status, upload$creation_time))
+  }
+  
+  return(uploads)
+}
+
+# Пример использования
+# monitor_uploads(12345678, "expense")
+```
+
+# Обработка ошибок и устранение неисправностей
+
+## Общие ошибки загрузки
+
+```{r error-handling}
+# Обработка общих ошибок загрузки
+handle_upload_error  function(error_message) {
+  if (grepl("authentication", error_message, ignore.case = TRUE)) {
+    message("Ошибка аутентификации. Пожалуйста, проверьте свой токен.")
+    return("auth_error")
+  } else if (grepl("rate limit", error_message, ignore.case = TRUE)) {
+    message("Достигнут лимит скорости. Подождите перед повторной попыткой.")
+    return("rate_limit")
+  } else if (grepl("format", error_message, ignore.case = TRUE)) {
+    message("Ошибка формата данных. Проверьте структуру ваших данных.")
+    return("format_error")
+  } else if (grepl("permission", error_message, ignore.case = TRUE)) {
+    message("Доступ запрещен. Проверьте права доступа к счётчику.")
+    return("permission_error")
+  } else {
+    message("Неизвестная ошибка: ", error_message)
+    return("unknown_error")
+  }
+}
+
+# Надежная функция загрузки
+robust_upload  function(upload_func, max_retries = 3, retry_delay = 30) {
+  for (attempt in 1:max_retries) {
+    result  tryCatch({
+      upload_func()
+    }, error = function(e) {
+      error_type  handle_upload_error(e$message)
+      
+      if (error_type == "rate_limit"   attempt  max_retries) {
+        message(sprintf("Попытка %d не удалась. Повтор через %d секунд...", 
+                       attempt, retry_delay))
+        Sys.sleep(retry_delay)
+        return("retry")
+      } else {
+        stop(e)
+      }
+    })
+    
+    if (!identical(result, "retry")) {
+      return(result)
+    }
+  }
+  
+  stop("Превышено максимальное количество попыток")
+}
+
+# Пример использования
+# robust_upload(function() {
+#   upload_client$upload_expense(12345678, expense_data, "Тестовая загрузка")
+# })
+```
+
+## Устранение неисправностей формата данных
+
+```{r format-troubleshooting}
+# Отладка проблем формата данных
+debug_data_format  function(data, upload_type = "expense") {
+  cat("Отчет об отладке формата данных\n")
+  cat("===============================\n\n")
+  
+  cat("Размеры данных:", nrow(data), "строк,", ncol(data), "столбцов\n\n")
+  
+  cat("Названия столбцов:\n")
+  cat(paste(colnames(data), collapse = ", "), "\n\n")
+  
+  cat("Типы столбцов:\n")
+  for (col in colnames(data)) {
+    cat(sprintf("  %s: %s\n", col, class(data[[col]])[1]))
+  }
+  
+  cat("\nПервые несколько строк:\n")
+  print(head(data, 3))
+  
+  cat("\nПроверка качества данных:\n")
+  
+  # Проверка пропущенных значений
+  na_cols  sapply(data, function(x) sum(is.na(x)))
+  if (any(na_cols   0)) {
+    cat("  Обнаружены пропущенные значения в столбцах:\n")
+    for (col in names(na_cols[na_cols   0])) {
+      cat(sprintf("    %s: %d пропущенных значений\n", col, na_cols[col]))
+    }
+  } else {
+    cat("  Пропущенные значения не обнаружены\n")
+  }
+  
+  # Проверки, специфичные для типа
+  if (upload_type == "expense") {
+    if (!"Date" %in% colnames(data)) {
+      cat("  ОШИБКА: отсутствует столбец Date\n")
+    } else if (!inherits(data$Date, "Date")) {
+      cat("  ОШИБКА: столбец Date не является типом Date\n")
+    }
+    
+    if (!"Expenses" %in% colnames(data)) {
+      cat("  ОШИБКА: отсутствует столбец Expenses\n")
+    } else if (!is.numeric(data$Expenses)) {
+      cat("  ОШИБКА: столбец Expenses не является числовым\n")
+    }
+  }
+}
+
+# Пример использования
+# debug_data_format(expense_data, "expense")
+```
+
+# Лучшие практики
+
+## Подготовка данных
+
+```{r best-practices}
+# Функция подготовки данных по лучшим практикам
+prepare_expense_data  function(raw_data) {
+  # Убедитесь в наличии правильных названий столбцов
+  required_cols  c("Date", "UTMSource", "UTMMedium", "UTMCampaign", "Expenses")
+  
+  # Очистка и проверка данных
+  clean_data  raw_data %%
+    # Преобразование столбца даты
+    mutate(Date = as.Date(Date)) %%
+    # Очистка числовых столбцов
+    mutate(Expenses = as.numeric(gsub("[^0-9.]", "", Expenses))) %%
+    # Удаление строк с отсутствующими необходимыми данными
+    filter(!is.na(Date), !is.na(Expenses), Expenses   0) %%
+    # Очистка текстовых столбцов
+    mutate(
+      UTMSource = trimws(UTMSource),
+      UTMMedium = trimws(UTMMedium),
+      UTMCampaign = trimws(UTMCampaign)
+    ) %%
+    # Удаление дубликатов
+    distinct()
+  
+  return(clean_data)
+}
+
+# Инкрементальная стратегия загрузки
+incremental_upload  function(counter_id, data, batch_size = 1000) {
+  total_rows  nrow(data)
+  num_batches  ceiling(total_rows / batch_size)
+  
+  results  list()
+  
+  for (i in 1:num_batches) {
+    start_row  (i - 1) * batch_size + 1
+    end_row  min(i * batch_size, total_rows)
+    
+    batch_data  data[start_row:end_row, ]
+    
+    cat(sprintf("Загрузка пакета %d/%d (%d строк)...\n", i, num_batches, nrow(batch_data)))
+    
+    result  upload_client$upload_expense(
+      counter_id = counter_id,
+      data = batch_data,
+      comment = sprintf("Пакет %d из %d", i, num_batches)
+    )
+    
+    results[[i]]  result
+    
+    # Добавить задержку между пакетами
+    if (i  num_batches) {
+      Sys.sleep(5)
+    }
+  }
+  
+  return(results)
+}
+```
+
+# Миграция от устаревшего к современному API
+
+## Сравнение подходят
+
+```{r migration-comparison}
+# Подход наследия
+legacy_upload  function() {
+  result  rym_upload_expense(
+    counter = 12345678,
+    data = expense_data,
+    comment = "Загрузка по наследию"
+  )
+  
+  uploads  rym_get_uploadings_expense(counter = 12345678)
+  return(list(result = result, uploads = uploads))
+}
+
+# Современный подход
+modern_upload  function() {
+  upload_client  RymUploadAPI$new(token = token)
+  
+  result  upload_client$upload_expense(
+    counter_id = 12345678,
+    data = expense_data,
+    comment = "Современная загрузка"
+  )
+  
+  uploads  upload_client$get_expense_uploads(counter_id = 12345678)
+  return(list(result = result, uploads = uploads))
+}
+```
+
+## Преимущества миграции
+
+Современный API предоставляет несколько преимуществ:
+
+- **Лучшая обработка ошибок**: Более подробные сообщения об ошибках и варианты восстановления
+- **Последовательный интерфейс**: Унифицированный подход ко всем типам загрузки
+- **Расширенные функции**: Отслеживание прогресса, пакетные операции, проверка
+- **Устойчивость к изменениям в будущем**: Будут добавлены новые возможности и улучшения
+
+# Ресурсы и ссылки
+
+## Официальная документация
+
+- [Документация по API загрузки Yandex Metrica](https://yandex.com/dev/metrika/doc/api2/management/uploading/uploading.html)
+- [Требования к формату данных](https://yandex.com/dev/metrika/doc/api2/management/uploading/data-format.html)
+
+## Связанные виньетки
+
+- `vignette("getting-started", package = "rym")` - Общее введение в пакет
+- `vignette("advanced-analytics", package = "rym")` - Продвинутые аналитические техники
+
+---
+
+Это полное руководство охватывает все аспекты функции загрузки данных в rym 2.0. Для дополнительной помощи обратитесь к документации по функциям, используя `?function_name`, или посетите репозиторий GitHub пакета.
