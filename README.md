@@ -4,7 +4,7 @@
 CRAN
 ====
 
-[![Rdoc](http://www.rdocumentation.org/badges/version/rym)](https://www.rdocumentation.org/packages/rym)
+[Rdoc](http://www.rdocumentation.org/badges/version/rym)](https://www.rdocumentation.org/packages/rym)
 
 Официальная документация к пакету rym
 =====================================
@@ -16,7 +16,7 @@ CRAN
 
 `rym` является R интерфейсом для работы с API Яндекс Метрики, его функции позволяют вам взаимодействовать со следующими API:
 
-1.  [API Управления](https://yandex.ru/dev/metrika/doc/api2/management/intro-docpage) - позволяет получить таблицы с такими объектами как достуные счёт��ики Яндекс.Метрики, список настроенных целей, фильтров и сегментов, а так же список пользователей у которых есть доступ к счётчику.
+1.  [API Управления](https://yandex.ru/dev/metrika/doc/api2/management/intro-docpage) - позволяет получить таблицы с такими объектами как достуные счётчики Яндекс.Метрики, список настроенных целей, фильтров и сегментов, а так же список пользователей у которых есть доступ к счётчику.
 2.  [API Отчётов](https://yandex.ru/dev/metrika/doc/api2/api_v1/intro-docpage) - позволяет получать информацию о статистике посещений сайта и другие данные, не используя интерфейс Яндекс.Метрики.
 3.  [API совместимый с Core API Google Analytics (v3)](https://yandex.ru/dev/metrika/doc/api2/ga/intro-docpage) - позволяет запрашивать статистические данные используя при этом название полей такие же как и при работе с Core Reporting API v3.
 4.  [Logs API](https://yandex.ru/dev/metrika/doc/api2/logs/intro-docpage) - позволяет получить сырые, несгруппированные данные о посещении вашего сайта из Яндекс.Метрики.
